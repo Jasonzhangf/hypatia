@@ -1,6 +1,6 @@
 [package]
 name = "hypatia"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
@@ -12,6 +12,15 @@ chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
 clap = { version = "4", features = ["derive"] }
 rustyline = "18"
+walkdir = "2"
+sha2 = "0.10"
+ignore = "0.4"               # gitignore-style skip rules
+candle-core = "0.9"
+candle-nn = "0.9"
+candle-transformers = "0.9"
+tokenizers = "0.21"
+dirs = "6"
+indicatif = "0.17"           # progress bars
 
 [dev-dependencies]
 tempfile = "3"

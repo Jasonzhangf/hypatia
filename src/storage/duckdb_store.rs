@@ -316,6 +316,20 @@ impl DuckDbStore {
         }
         Ok(result)
     }
+    /// Get total knowledge count
+    pub fn knowledge_count(&self) -> Result<usize> {
+        let row: usize = self.conn.query_row("SELECT COUNT(*) FROM knowledge", [], |row| row.get(0))
+            .map_err(StorageError::from)?;
+        Ok(row)
+    }
+
+    /// Get total statement count
+    pub fn statement_count(&self) -> Result<usize> {
+        let row: usize = self.conn.query_row("SELECT COUNT(*) FROM statement", [], |row| row.get(0))
+            .map_err(StorageError::from)?;
+        Ok(row)
+    }
+
 }
 
 #[cfg(test)]

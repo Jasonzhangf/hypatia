@@ -230,6 +230,12 @@ impl SqliteStore {
         }
         Ok(result)
     }
+    /// Get total document count in FTS
+    pub fn doc_count(&self) -> Result<usize> {
+        let count: i64 = self.conn.query_row("SELECT COUNT(*) FROM docs_fts", [], |row| row.get::<_, i64>(0)).map_err(StorageError::from)?;
+        Ok(count as usize)
+    }
+
 }
 
 fn is_duplicate_column_error(e: &rusqlite::Error) -> bool {
