@@ -298,6 +298,8 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
         }
         Commands::Init { path } => {
             let expanded = shellexpand_tilde(&path);
+            // Download embedding model if not present
+            super::init_model::ensure_models()?;
             lab.init_library(&expanded)?;
             println!("Initialized Hypatia library at: {}", expanded.display());
         }

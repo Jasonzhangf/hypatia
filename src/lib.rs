@@ -10,7 +10,7 @@ pub mod service;
 pub mod storage;
 pub mod vector;
 
-pub use embed::Embedder;
+pub use embed::{embed, simple_hash_embed, cosine_similarity, EMBEDDING_DIM};
 pub use error::{HypatiaError, Result};
 pub use hybrid::HybridResult;
 pub use lab::Lab;
