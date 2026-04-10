@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 use crate::lab::Lab;
-use crate::model::{Content, SearchOpts, StatementKey, Synonyms};
+use crate::model::{Content, LocalProjectConfig, Project, SearchOpts, StatementKey, Synonyms};
+use crate::service::ProjectManager;
+use crate::config::{load_local_config, save_local_config};
 
 #[derive(Parser)]
 #[command(name = "hypatia", about = "AI-oriented memory management system with code mining and hybrid search", version)]
@@ -163,6 +165,77 @@ enum Commands {
     },
     /// Enter interactive REPL mode
     Repl,
+    /// Project management commands
+    Project {
+        #[command(subcommand)]
+        action: ProjectAction,
+    },
+    /// Initialize a project in the current directory
+    ProjectInit {
+        /// Project name (defaults to directory name)
+        #[arg(short, long)]
+        name: Option<String>,
+        /// Wing to assign this project to
+        #[arg(short, long)]
+        wing: Option<String>,
+        /// Room to assign this project to
+        #[arg(long)]
+        room: Option<String>,
+        /// Shelf to use (defaults to project name)
+        #[arg(short, long)]
+        shelf: Option<String>,
+    },
+    /// Mine a registered project by name
+    ProjectMine {
+        /// Project name
+        name: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum ProjectAction {
+    /// Register a new project
+    Add {
+        /// Project name
+        name: String,
+        /// Root directory of the project
+        #[arg(short, long, default_value = ".")]
+        root: PathBuf,
+        /// Shelf name (defaults to project name)
+        #[arg(short, long)]
+        shelf: Option<String>,
+        /// Wing assignment
+        #[arg(short, long)]
+        wing: Option<String>,
+        /// Room assignment
+        #[arg(long)]
+        room: Option<String>,
+    },
+    /// Remove a project from the registry
+    Remove {
+        name: String,
+    },
+    /// List all registered projects
+    List,
+    /// Show project details
+    Show {
+        name: String,
+    },
+    /// Toggle auto-watch for a project
+    AutoWatch {
+        name: String,
+        /// Enable or disable auto-watch
+        #[arg(long)]
+        enable: bool,
+        /// Disable auto-watch
+        #[arg(long)]
+        disable: bool,
+    },
+    /// Mine a specific project by name
+    Mine {
+        /// Project name
+        name: String,
+    },
 }
 
 pub fn run() -> crate::error::Result<()> {
@@ -333,6 +406,67 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             // Repl is handled in run(), this should not be reached
             unreachable!("Repl command should be handled in run()")
         }
+        Commands::Project { action } => {
+            handle_project_action(action)?;
+        }
+        Commands::ProjectInit { name, wing, room, shelf } => {
+            let current_dir = std::env::current_dir()?;
+            let project_name = name.unwrap_or_else(|| {
+                current_dir.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("default")
+                    .to_string()
+            });
+            let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+            let hypatia_home = home.join(".hypatia");
+            let mut manager = ProjectManager::new(&hypatia_home)?;
+            
+            let project = manager.add_project(
+                project_name.clone(),
+                current_dir.clone(),
+                shelf.or(Some(project_name.clone())),
+                wing,
+                room,
+            )?;
+            
+            println!("Initialized project '{}' at {}", project.name, project.root.display());
+            println!("Shelf: {}", project.shelf);
+            if let Some(w) = &project.wing {
+                println!("Wing: {}", w);
+            }
+            if let Some(r) = &project.room {
+                println!("Room: {}", r);
+            }
+            println!("Config file: {}/.hypatia/project.toml", project.root.display());
+        }
+        Commands::ProjectMine { name } => {
+            let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+            let hypatia_home = home.join(".hypatia");
+            let manager = ProjectManager::new(&hypatia_home)?;
+            
+            match manager.get_project(&name) {
+                Some(project) => {
+                    let local_config = load_local_config(&project.root)?;
+                    let (max_size, chunk_size, skip_patterns, extensions) = if let Some(cfg) = local_config {
+                        (cfg.max_file_size, cfg.chunk_size, cfg.skip_patterns, cfg.extensions)
+                    } else {
+                        (project.max_file_size, project.chunk_size, project.skip_patterns.clone(), project.extensions.clone())
+                    };
+                    
+                    let count = lab.mine_directory(
+                        &project.shelf,
+                        &project.root,
+                        max_size,
+                        chunk_size,
+                        false,
+                    )?;
+                    println!("Indexed {} chunks from project '{}'", count, name);
+                }
+                None => {
+                    println!("Project '{}' not found. Use 'project list' to see registered projects.", name);
+                }
+            }
+        }
     }
     Ok(())
 }
@@ -346,4 +480,108 @@ fn shellexpand_tilde(path: &std::path::Path) -> std::path::PathBuf {
         }
     }
     path.to_path_buf()
+}
+fn handle_project_action(action: ProjectAction) -> crate::error::Result<()> {
+    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    let hypatia_home = home.join(".hypatia");
+    let mut manager = ProjectManager::new(&hypatia_home)?;
+
+    match action {
+        ProjectAction::Add { name, root, shelf, wing, room } => {
+            let canonical_root = root.canonicalize()
+                .map_err(|e| crate::error::HypatiaError::IoMsg(
+                    format!("Directory does not exist: {}: {}", root.display(), e)
+                ))?;
+            let project = manager.add_project(
+                name,
+                canonical_root,
+                shelf,
+                wing,
+                room,
+            )?;
+            println!("Added project '{}' -> {}", project.name, project.root.display());
+            println!("  Shelf: {}", project.shelf);
+            if let Some(w) = &project.wing { println!("  Wing: {}", w); }
+            if let Some(r) = &project.room { println!("  Room: {}", r); }
+        }
+        ProjectAction::Remove { name } => {
+            match manager.remove_project(&name)? {
+                Some(p) => println!("Removed project '{}' ({})", p.name, p.root.display()),
+                None => println!("Project '{}' not found", name),
+            }
+        }
+        ProjectAction::List => {
+            let projects = manager.list_projects();
+            if projects.is_empty() {
+                println!("No projects registered. Use 'project add <name>' to register one.");
+            } else {
+                println!("Registered projects:");
+                println!("{:<20} {:<15} {:<10} {:<10} {}", "Name", "Shelf", "Wing", "Room", "Path");
+                println!("{}", "-".repeat(90));
+                for p in projects {
+                    println!(
+                        "{:<20} {:<15} {:<10} {:<10} {}",
+                        p.name,
+                        p.shelf,
+                        p.wing.as_deref().unwrap_or("-"),
+                        p.room.as_deref().unwrap_or("-"),
+                        p.root.display(),
+                    );
+                }
+            }
+        }
+        ProjectAction::Show { name } => {
+            match manager.get_project(&name) {
+                Some(p) => {
+                    println!("Project: {}", p.name);
+                    println!("  Root: {}", p.root.display());
+                    println!("  Shelf: {}", p.shelf);
+                    if let Some(w) = &p.wing { println!("  Wing: {}", w); }
+                    if let Some(r) = &p.room { println!("  Room: {}", r); }
+                    println!("  Auto-watch: {}", if p.auto_watch { "enabled" } else { "disabled" });
+                    println!("  Max file size: {} bytes", p.max_file_size);
+                    println!("  Chunk size: {} chars", p.chunk_size);
+                    println!("  Extensions: {}", p.extensions.join(", "));
+                    println!("  Skip patterns: {}", p.skip_patterns.join(", "));
+                    println!("  Created: {}", p.created_at);
+                    if let Some(t) = &p.last_indexed {
+                        println!("  Last indexed: {}", t);
+                    }
+                }
+                None => println!("Project '{}' not found", name),
+            }
+        }
+        ProjectAction::AutoWatch { name, enable, disable } => {
+            if enable && disable {
+                println!("Cannot use both --enable and --disable");
+            } else if enable {
+                manager.toggle_auto_watch(&name, true)?;
+                println!("Auto-watch enabled for project '{}'", name);
+            } else if disable {
+                manager.toggle_auto_watch(&name, false)?;
+                println!("Auto-watch disabled for project '{}'", name);
+            } else {
+                println!("Use --enable or --disable to toggle auto-watch");
+            }
+        }
+        ProjectAction::Mine { name } => {
+            match manager.get_project(&name) {
+                Some(project) => {
+                    let mut lab = Lab::new()?;
+                    let count = lab.mine_directory(
+                        &project.shelf,
+                        &project.root,
+                        project.max_file_size,
+                        project.chunk_size,
+                        false,
+                    )?;
+                    println!("Indexed {} chunks from project '{}'", count, name);
+                }
+                None => {
+                    println!("Project '{}' not found", name);
+                }
+            }
+        }
+    }
+    Ok(())
 }

@@ -25,6 +25,12 @@ pub enum HypatiaError {
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+
+    #[error("IO error: {0}")]
+    IoMsg(String),
+
+    #[error("toml error: {0}")]
+    Toml(String),
 }
 
 #[derive(Debug, Error)]

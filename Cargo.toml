@@ -16,6 +16,7 @@ rustyline = "18"
 walkdir = "2"
 sha2 = "0.10"
 ignore = "0.4"               # gitignore-style skip rules
+toml = "0.8"                # config file parsing
 candle-core = "0.9"
 candle-nn = "0.9"
 candle-transformers = "0.9"

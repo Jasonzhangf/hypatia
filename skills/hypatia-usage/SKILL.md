@@ -1,168 +1,259 @@
----
-name: hypatia-usage
-description: "Use Hypatia as your local AI memory + code index. Covers initialization, mining, search strategies (FTS vs vector vs JSE), and knowledge management. Trigger when: initializing hypatia, indexing code/projects, deciding which search mode to use, or managing memory."
-user-invocable: true
-allowed-tools: Bash, Read, Grep, Glob
-argument-hint: <initialization | indexing | search | memory management>
----
+# Hypatia CLI Usage Guide
 
-# Hypatia Usage Guide
+## Overview
+Hypatia is an AI-oriented memory management system with:
+- FTS (Full-Text Search) for exact keyword matching
+- Vector/semantic search for fuzzy matching
+- Hybrid search combining both with RRF fusion
+- Code mining for indexing source files
+- Project management with wing/room hierarchy
 
-Hypatia 是一个一体化的本地 AI 记忆系统 + 代码索引工具，支持：结构化知识（Knowledge + Statement 三元组）、全文检索（FTS5）、语义向量检索（BERT embedding）、混合搜索（FTS + 向量 RRF 融合）。
+## Initialization
 
-## 1. 初始化
+### First-time setup
+```bash
+# Initialize Hypatia library (downloads embedding model)
+hypatia init ~/.hypatia
+
+# Or with default path
+hypatia init
+```
+
+This downloads the `all-MiniLM-L6-v2` embedding model (~86MB) to `~/.hypatia/models/`.
+
+### Project initialization
+```bash
+# In your project directory
+cd ~/github/myproject
+hypatia project-init
+
+# Or specify options
+hypatia project-init --name myproject --wing code --room rust
+```
+
+Creates:
+- `~/.hypatia/projects.json` - project registry
+- `.hypatia/project.toml` - local project config
+
+## Project Management
+
+### Register projects
+```bash
+# Add a project
+hypatia project add myproject --root ~/github/myproject --wing work
+
+# List all projects
+hypatia project list
+
+# Show project details
+hypatia project show myproject
+
+# Remove a project
+hypatia project remove myproject
+
+# Enable auto-watch (future feature)
+hypatia project auto-watch myproject --enable
+```
+
+### Project config file (.hypatia/project.toml)
+```toml
+name = "myproject"
+wing = "code"
+room = "rust"
+
+# Skip patterns (extends defaults)
+skip_patterns = [
+    "target/**",
+    "node_modules/**",
+    "*.lock",
+]
+
+# File extensions to include
+extensions = ["rs", "ts", "md"]
+
+# Mining settings
+max_file_size = 1048576  # 1MB
+chunk_size = 512
+```
+
+## Mining (Indexing)
+
+### Mine a directory directly
+```bash
+# Index a directory into a shelf
+hypatia mine ~/github/myproject --shelf myproject
+
+# With options
+hypatia mine ~/github/myproject --shelf myproject --max-size 2097152 --chunk-size 1024
+```
+
+### Mine a registered project
+```bash
+# Uses project's config settings
+hypatia project mine myproject
+```
+
+### Incremental watch (scan changes)
+```bash
+hypatia watch ~/github/myproject --shelf myproject
+```
+
+## Search Types
+
+### When to use each search type
+
+| Search Type | Use Case | Example |
+|-------------|----------|---------|
+| `search` (FTS) | Exact keywords, code symbols, specific terms | `hypatia search "fn main"` |
+| `vsearch` | Fuzzy matching, semantic search, typos, related concepts | `hypatia vsearch "error handling"` |
+| `hybrid` | Best of both, general queries | `hypatia hybrid "memory system"` |
+
+### Exact search (FTS)
+```bash
+# Search for exact keywords
+hypatia search "struct Knowledge" --shelf myproject
+
+# With catalog filter
+hypatia search "mod config" --catalog knowledge --shelf myproject
+
+# Pagination
+hypatia search "function" --limit 50 --offset 0 --shelf myproject
+```
+
+### Semantic search (Vector)
+```bash
+# Search by meaning (handles typos, synonyms)
+hypatia vsearch "error handling logic" --shelf myproject --limit 10
+
+# "err handlig" still finds error handling content
+hypatia vsearch "err handlig" --shelf myproject
+```
+
+### Hybrid search (Recommended)
+```bash
+# Combines FTS + vector with RRF fusion
+hypatia hybrid "memory management" --shelf myproject --limit 20
+```
+
+## Wing/Room Hierarchy
+
+Hypatia supports mempalace-style organization:
+- **Shelf**: Top-level storage unit (default: project name)
+- **Wing**: Category within shelf (optional)
+- **Room**: Sub-category within wing (optional)
 
 ```bash
-# 一键初始化：创建 shelf + 自动下载 embedding 模型
-hypatia init ~/hypatia-data
+# Register project with hierarchy
+hypatia project add client-api --wing work --room production
+hypatia project add personal-blog --wing personal --room blog
 
-# 模型自动下载到 ~/.hypatia/models/（约 86MB，首次）
-# 后续启动自动检测，已存在则跳过
+# List shows hierarchy
+hypatia project list
 ```
 
-初始化后 `~/.hypatia/models/` 包含：
-- `config.json` — BERT 配置
-- `tokenizer.json` — 分词器
-- `model.safetensors` — all-MiniLM-L6-v2 模型（384 维）
+## Knowledge & Statements
 
-如果没有模型，Hypatia 会自动降级到 hash 嵌入（确定性，但无语义）。
+### Knowledge entries (named content)
+```bash
+# Create
+hypatia knowledge-create "API Design" --data "REST endpoints for..." --tags api,design --shelf myproject
 
-## 2. 索引代码（Mine）
+# Get
+hypatia knowledge-get "API Design" --shelf myproject
+
+# Delete
+hypatia knowledge-delete "API Design" --shelf myproject
+```
+
+### Statements (triples for relationships)
+```bash
+# Create triple
+hypatia statement-create "Hypatia" "uses" "DuckDB" --data "for FTS storage" --shelf myproject
+
+# Delete triple
+hypatia statement-delete "Hypatia" "uses" "DuckDB" --shelf myproject
+```
+
+## Multi-Project Workflow
+
+### Typical setup
+```bash
+# 1. Initialize
+hypatia init
+
+# 2. Register all your code projects
+hypatia project add routecodex --wing code --room rust
+hypatia project add dify --wing code --room python
+hypatia project add obsidian --wing personal --room notes
+
+# 3. Mine each project
+hypatia project mine routecodex
+hypatia project mine dify
+hypatia project mine obsidian
+
+# 4. Search across shelves
+hypatia hybrid "error handling" --shelf routecodex
+hypatia hybrid "agent workflow" --shelf dify
+```
+
+### Cross-project search
+Each project has its own shelf. Search per shelf or connect multiple shelves.
 
 ```bash
-# 全量索引一个项目目录
-hypatia mine ~/github/routecodex --shelf default
+# Connect shelves
+hypatia connect ~/.hypatia/shelves/routecodex --name routecodex
+hypatia connect ~/.hypatia/shelves/dify --name dify
 
-# 增量索引（只索引变更文件）
-hypatia watch --shelf default
-
-# 索引时自动：WalkDir 扫描 → 按代码结构切块 → 生成 embedding → 写入 FTS + 向量
+# List connected shelves
+hypatia list
 ```
 
-索引后的数据：
-- 每个代码块 → 一条 Knowledge 记录（含 path/lang/symbol 元数据）
-- FTS 索引 → 支持关键词全文搜索
-- 向量索引 → 支持语义相似度搜索
+## Best Practices
 
-## 3. 知识管理
+1. **Use `project-init` for new projects** - auto-generates config file
+2. **Edit `.hypatia/project.toml`** to customize skip patterns
+3. **Use `hybrid` search** as default for best results
+4. **Use `search` (FTS)** for code symbols and exact matches
+5. **Use `vsearch`** for user input that may have typos
+6. **Group projects by wing/room** for organization
+7. **Re-mine periodically** or use watch for incremental updates
 
+## Comparison with Mempalace
+
+| Feature | Hypatia | Mempalace |
+|---------|---------|-----------|
+| FTS | SQLite FTS5 | Not native |
+| Vector search | Candle embeddings | Candle embeddings |
+| Hybrid search | RRF fusion | Not native |
+| Wing/Room | Supported | Core concept |
+| Project registry | Yes | Yes |
+| Auto-watch daemon | Planned | Yes |
+| Config files | project.toml | .mempalace_ignore |
+
+Hypatia provides both exact and semantic search, making it suitable for:
+- **Code search**: FTS for symbols, vector for concepts
+- **Memory search**: Hybrid for user queries
+- **Knowledge management**: Statements + knowledge entries
+
+## Troubleshooting
+
+### Model download fails
 ```bash
-# 创建知识节点
-hypatia knowledge-create "RouteCodex" -d "local AI memory system" -t "rust,ai"
-
-# 创建三元组关系
-hypatia statement-create RouteCodex manages OpenClash
-hypatia statement-create WebAuto uses Camoufox
-
-# 获取/删除
-hypatia knowledge-get RouteCodex
-hypatia knowledge-delete RouteCodex
-hypatia statement-delete RouteCodex manages OpenClash
+# Manual download
+mkdir -p ~/.hypatia/models
+# Download all-MiniLM-L6-v2 from HuggingFace
 ```
 
-## 4. 搜索策略（关键：什么时候用什么）
+### No search results
+1. Check shelf name matches project: `hypatia project show <name>`
+2. Verify mining completed: check chunk count output
+3. Use `hybrid` instead of `search` for better recall
 
-### 4.1 模糊搜索 → `hypatia search`（FTS5）
-
-**什么时候用：**
-- 用户输入自然语言、口语化查询、可能有错别字
-- 例如："找个和网络路由有关的东西"、"那个记认证逻辑的文件"
-- Agent 需要"召回"记忆时的 first-pass
-
-**特点：**
-- BM25 加权：key=10, tags=5, synonyms=3, data=1
-- Porter 词干提取：running → run, databases → databas
-- 同义词扩展：创建时加 synonyms 可增强召回
-- 支持多词搜索（会自动转义）
-
-**示例：**
+### Project not found
 ```bash
-hypatia search "routing database"
-hypatia search "authentication" --limit 5
+# Check registry
+hypatia project list
+
+# Re-add if missing
+hypatia project add <name> --root <path>
 ```
-
-### 4.2 精确搜索 → `hypatia query`（JSE）
-
-**什么时候用：**
-- Agent 内部执行查询（已知结构、精确条件）
-- 需要布尔组合、关系过滤、时间范围
-- 例如："找到所有 subject=RouteCodex 的三元组"、"找标签含 rust 的知识"
-
-**JSE 语法示例：**
-```bash
-# 精确匹配
-hypatia query '["$knowledge", ["$eq", "name", "RouteCodex"]]'
-
-# 模糊模式
-hypatia query '["$knowledge", ["$like", "tags", "%networking%"]]'
-
-# 组合条件
-hypatia query '["$and", ["$like", "name", "%Rust%"], ["$like", "tags", "%language%"]]'
-
-# 三元组查询
-hypatia query '["$statement", ["$triple", "RouteCodex", "$*", "$*"]]'
-```
-
-### 4.3 语义搜索 → `hypatia vsearch`（向量）
-
-**什么时候用：**
-- 语义相似但字面无关键词的查询
-- 例如：搜 "authentication" 想命中 "OAuth2 token validation"
-- 需要理解意图而非匹配字面
-
-**示例：**
-```bash
-hypatia vsearch "how to secure API endpoints" --limit 5
-```
-
-### 4.4 混合搜索 → `hypatia hybrid`（FTS + 向量 RRF）
-
-**什么时候用：**
-- 不确定是关键词匹配还是语义匹配更好时
-- 想要兼顾精确命中和语义发现
-- 推荐作为 Agent 默认搜索策略
-
-**原理：** RRF（Reciprocal Rank Fusion）融合 FTS 排名和向量排名，两者互补。
-
-**示例：**
-```bash
-hypatia hybrid "route configuration" --limit 10
-```
-
-## 5. 推荐搜索决策树
-
-```
-用户输入
-  │
-  ├─ 有明确实体名/标签/关系？
-  │   └─ YES → hypatia query（JSE 精确查询）
-  │
-  ├─ 需要语义理解/意图识别？
-  │   └─ YES → hypatia hybrid（混合搜索，最稳）
-  │
-  ├─ 纯关键词匹配就够？
-  │   └─ YES → hypatia search（FTS，最快）
-  │
-  └─ 字面完全不匹配但语义相关？
-      └─ YES → hypatia vsearch（向量，最语义化）
-```
-
-## 6. 日常运维
-
-```bash
-# 查看状态（shelf 数量、FTS 文档数、向量数量）
-hypatia status
-
-# 健康检查（FTS 完整性、数据一致性）
-hypatia doctor
-
-# 导出 shelf
-hypatia export default ~/backup/hypatia-shelf
-```
-
-## 7. Agent 集成最佳实践
-
-1. **用户说"记住 X"**：→ `knowledge-create` + `statement-create`（主动建关系）
-2. **用户说"找 X"**：→ 先判断类型 → 选 search/query/hybrid/vsearch
-3. **定期索引**：Agent 启动时执行 `watch` 增量索引
-4. **查询优先**：混合搜索 > FTS > 精确查询 > 向量（混合搜索覆盖最广）
