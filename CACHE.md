@@ -12677,3 +12677,158 @@ sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
 model: gpt-5.4
 provider: openai-responses
 -->
+
+### Assistant · 2026/04/10 23:00:17
+
+Jason，所有改动已提交到 `https://github.com/Jasonzhangf/hypatia.git`，commit `442594d`。
+
+## 回答你的四个问题
+
+### 1. 会自动 mine 吗？
+**目前不会**。需要手动执行 `hypatia project mine <name>` 或 `hypatia mine <path>`。`watch` 命令只做增量扫描，不做 daemon 后台监控。已预留了 `auto-watch` 开关，未来可以加 fsnotify daemon。
+
+### 2. 需要加入索引目录和跳过目录吗？
+**已支持**。在 `.hypatia/project.toml` 里配置：
+```toml
+skip_patterns = ["target/**", "node_modules/**", "*.lock"]
+extensions = ["rs", "ts", "md", "json"]
+```
+使用 `ignore` crate（和 `.gitignore` 同一引擎），支持 glob 模式。
+
+### 3. 支持 wing 吗？
+**已支持**。三级层次：**Shelf > Wing > Room**
+```bash
+hypatia project add myproject --wing code --room rust
+```
+`project list` 会显示 wing/room 分组。
+
+### 4. 多项目如何管理？
+**通过项目注册中心**。`~/.hypatia/projects.json` 记录所有项目，每个项目有自己的 shelf：
+```bash
+hypatia project add routecodex --wing code --room rust
+hypatia project add dify --wing code --room python
+hypatia project add obsidian --wing personal --room notes
+hypatia project mine routecodex   # 按名称 mine
+hypatia hybrid "error handling" --shelf routecodex  # 按 shelf 搜索
+```
+
+## 新增功能总结
+- `project add/list/show/remove/mine/auto-watch` — 完整项目管理
+- `project-init` — 在当前目录快速初始化项目
+- `.hypatia/project.toml` — 每个项目的配置文件
+- Wing/Room 层级组织
+- `skills/hypatia-usage/SKILL.md` — 完整使用指南
+
+<!-- cache-meta
+requestId: openai-responses-tabglm.key1-glm-5.1-20260410T225955949-111490-5627
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: glm-5.1
+provider: anthropic-messages
+finishReason: stop
+-->
+
+### User · 2026/04/10 23:18:36
+
+1. 我们需要 daemon 创建，显示状态。所有的目录都用同一个 daemon 监控，增量是监控文件变化？
+2. 默认支持.gitignore 和一些典型的构建生成物目录和类型，如果要手动增加需要显式添加
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260410T231836388-111687-5824
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/10 23:20:20
+
+要自动运行 miner，注册项目第一次手动运行，后续会自动后台监控文件变化进行 indexing
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260410T232020049-111706-5843
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/10 23:25:51
+
+所以它支持后台daemon做miner.也可以支持cli阻塞index,对吧？
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260410T232551456-111778-5915
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/10 23:56:40
+
+**Yes, Jason.** 你理解得非常准确。Hypatia 现在**同时支持两种模式**：
+
+## 两种模式对比
+
+| | CLI 阻塞模式 | Daemon 后台模式 |
+|---|---|---|
+| 命令 | `hypatia mine <path>` | `hypatia daemon-start` |
+| 执行方式 | 前台运行，完成即退出 | 后台常驻，fsnotify 实时监听 |
+| 触发时机 | 手动 | 文件创建/修改/删除自动触发 |
+| 适合场景 | 首次全量索引、一次性任务 | 日常开发中的持续监控 |
+
+## 典型工作流
+
+```bash
+# 1. 注册项目
+hypatia project add routecodex --root ~/github/routecodex --wing code --room rust
+
+# 2. 首次全量索引（CLI 阻塞模式）
+hypatia project-mine routecodex
+
+# 3. 启动 daemon 后台监控所有注册项目
+hypatia daemon-start
+
+# 4. 日常开发中，文件变化会自动触发增量索引
+# 查看状态
+hypatia daemon-status
+
+# 5. 搜索
+hypatia hybrid "error handling"
+hypatia vsearch "数据库连接"
+```
+
+## 当前状态
+
+- `daemon-start` — 启动 fsnotify daemon，监控所有注册项目的 `root` 目录
+- `daemon-stop` — 停止 daemon
+- `daemon-status` — 显示运行状态、监控项目列表、索引统计
+- `daemon-rescan` — 手动强制全量重扫
+- `.gitignore` + `.hypatia_ignore` 双重排除
+- 内置跳过：`node_modules`, `target`, `dist`, `.git`, `__pycache__` 等
+
+## 默认排除规则
+
+**目录**：`node_modules`, `target`, `dist`, `build`, `.git`, `__pycache__`, `.venv`, `.next`, `.nuxt`, `.cache`
+
+**文件**：`*.min.js`, `*.min.css`, `*.map`, `*.pyc`, `*.lock`
+
+**额外排除**：项目根目录的 `.hypatia_ignore` 文件（每行一个 pattern）
+
+需要我提交并推送到 GitHub 吗？
+
+<!-- cache-meta
+requestId: openai-responses-qwen.3-geetasamoda-qwen3.6-plus-20260410T235618397-112080-6217
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: qwen3.6-plus
+provider: openai-chat
+finishReason: stop
+-->
+
+### User · 2026/04/10 23:57:56
+
+需要，并且编译构建全局安装，更新 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260410T235756216-112093-6230
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->

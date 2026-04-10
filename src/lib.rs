@@ -10,6 +10,7 @@ pub mod model;
 pub mod service;
 pub mod storage;
 pub mod vector;
+pub mod daemon;
 
 pub use embed::{embed, simple_hash_embed, cosine_similarity, EMBEDDING_DIM};
 pub use error::{HypatiaError, Result};

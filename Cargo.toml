@@ -23,7 +23,11 @@ candle-transformers = "0.9"
 tokenizers = "0.21"
 dirs = "6"
 indicatif = "0.17"           # progress bars
+notify = "8"                 # file system watcher
 
 [dev-dependencies]
 tempfile = "3"
 rand = "0.9"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

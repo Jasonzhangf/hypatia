@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 use crate::lab::Lab;
-use crate::model::{Content, LocalProjectConfig, Project, SearchOpts, StatementKey, Synonyms};
+use crate::model::{Content, SearchOpts, StatementKey, Synonyms};
 use crate::service::ProjectManager;
-use crate::config::{load_local_config, save_local_config};
+use crate::config::load_local_config;
 
 #[derive(Parser)]
 #[command(name = "hypatia", about = "AI-oriented memory management system with code mining and hybrid search", version)]
@@ -190,6 +190,14 @@ enum Commands {
         /// Project name
         name: String,
     },
+    /// Start background watch daemon
+    DaemonStart,
+    /// Stop watch daemon
+    DaemonStop,
+    /// Show daemon status
+    DaemonStatus,
+    /// Force rescan of all watched directories
+    DaemonRescan,
 }
 
 #[derive(Subcommand)]
@@ -447,7 +455,7 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             match manager.get_project(&name) {
                 Some(project) => {
                     let local_config = load_local_config(&project.root)?;
-                    let (max_size, chunk_size, skip_patterns, extensions) = if let Some(cfg) = local_config {
+                    let (max_size, chunk_size, _skip_patterns, _extensions) = if let Some(cfg) = local_config {
                         (cfg.max_file_size, cfg.chunk_size, cfg.skip_patterns, cfg.extensions)
                     } else {
                         (project.max_file_size, project.chunk_size, project.skip_patterns.clone(), project.extensions.clone())
@@ -466,6 +474,28 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
                     println!("Project '{}' not found. Use 'project list' to see registered projects.", name);
                 }
             }
+        }
+        Commands::DaemonStart => {
+            use crate::daemon::WatchDaemon;
+            let mut daemon = WatchDaemon::new()?;
+            daemon.start()?;
+            println!("Daemon running. Use hypatia daemon-status to check.");
+            std::thread::park();
+        }
+        Commands::DaemonStop => {
+            use crate::daemon::WatchDaemon;
+            let mut daemon = WatchDaemon::new()?;
+            daemon.stop()?;
+        }
+        Commands::DaemonStatus => {
+            use crate::daemon::WatchDaemon;
+            let daemon = WatchDaemon::new()?;
+            daemon.status()?;
+        }
+        Commands::DaemonRescan => {
+            use crate::daemon::WatchDaemon;
+            let mut daemon = WatchDaemon::new()?;
+            daemon.rescan()?;
         }
     }
     Ok(())

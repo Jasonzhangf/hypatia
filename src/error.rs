@@ -29,6 +29,9 @@ pub enum HypatiaError {
     #[error("IO error: {0}")]
     IoMsg(String),
 
+    #[error("watcher error: {0}")]
+    Watcher(#[from] notify::Error),
+
     #[error("toml error: {0}")]
     Toml(String),
 }
