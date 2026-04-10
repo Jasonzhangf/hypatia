@@ -117,15 +117,29 @@ impl SqliteStore {
             }
         }
 
-        // Drop and recreate FTS virtual table (FTS5 schema cannot be ALTERed)
-        self.conn
-            .execute_batch("DROP TABLE IF EXISTS docs_fts")
-            .ok();
-        self.conn
-            .execute_batch(DOCS_FTS_SCHEMA)
-            .map_err(StorageError::from)?;
+        // Check if FTS table exists - don't drop/recreate if it already has data
+        let fts_exists: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='docs_fts'",
+                [], |row| row.get::<_, i64>(0))
+            .map_err(StorageError::from)? > 0;
 
-        // Recreate triggers
+        if !fts_exists {
+            // Create FTS virtual table (fresh DB only)
+            self.conn
+                .execute_batch(DOCS_FTS_SCHEMA)
+                .map_err(StorageError::from)?;
+
+            // Create triggers (IF NOT EXISTS handles duplicates)
+            self.conn
+                .execute_batch(&format!(
+                    "{TRIGGER_INSERT}; {TRIGGER_DELETE}; {TRIGGER_UPDATE};"
+                ))
+                .map_err(StorageError::from)?;
+        }
+
+        // Ensure triggers exist (IF NOT EXISTS handles re-creation safely)
         self.conn
             .execute_batch(&format!(
                 "DROP TRIGGER IF EXISTS docs_ai; \
