@@ -14,7 +14,7 @@ const MAX_TEXT_CHARS: usize = 8000;
 
 static MODEL_CACHE: OnceLock<Option<CachedModel>> = OnceLock::new();
 
-struct CachedModel {
+pub struct CachedModel {
     model: BertModel,
     tokenizer: Tokenizer,
     device: Device,

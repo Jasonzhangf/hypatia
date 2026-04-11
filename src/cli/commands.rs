@@ -198,6 +198,11 @@ enum Commands {
     DaemonStatus,
     /// Force rescan of all watched directories
     DaemonRescan,
+    /// Rebuild FTS index from docs_meta (fix count mismatch)
+    RebuildFts {
+        #[arg(short, long, default_value = "default")]
+        shelf: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -496,6 +501,10 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             use crate::daemon::WatchDaemon;
             let mut daemon = WatchDaemon::new()?;
             daemon.rescan()?;
+        }
+        Commands::RebuildFts { shelf } => {
+            let (meta_count, fts_count) = lab.rebuild_fts(&shelf)?;
+            println!("Rebuilt FTS index: {} docs_meta -> {} docs_fts entries", meta_count, fts_count);
         }
     }
     Ok(())

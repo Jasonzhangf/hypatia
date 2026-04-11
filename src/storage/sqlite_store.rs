@@ -199,14 +199,14 @@ impl SqliteStore {
         let sql = match catalog_filter {
             Some(_) =>
                 &format!("SELECT m.id, m.catalog, m.key, m.content, {BM25_WEIGHTS} as rank \
-                 FROM docs_meta m \
-                 JOIN docs_fts f ON m.id = f.rowid \
+                 FROM docs_fts \
+                 JOIN docs_meta m ON docs_fts.rowid = m.id \
                  WHERE docs_fts MATCH ?1 AND m.catalog = ?2 \
                  ORDER BY rank LIMIT ?3 OFFSET ?4"),
             None =>
                 &format!("SELECT m.id, m.catalog, m.key, m.content, {BM25_WEIGHTS} as rank \
-                 FROM docs_meta m \
-                 JOIN docs_fts f ON m.id = f.rowid \
+                 FROM docs_fts \
+                 JOIN docs_meta m ON docs_fts.rowid = m.id \
                  WHERE docs_fts MATCH ?1 \
                  ORDER BY rank LIMIT ?2 OFFSET ?3"),
         };
@@ -236,6 +236,37 @@ impl SqliteStore {
         Ok(count as usize)
     }
 
+    /// Get total document count in docs_meta
+    pub fn count_docs(&self) -> Result<i64> {
+        let count: i64 = self.conn.query_row("SELECT COUNT(*) FROM docs_meta", [], |row| row.get(0)).map_err(StorageError::from)?;
+        Ok(count)
+    }
+
+    /// Rebuild FTS index from docs_meta (fixes count mismatch)
+    pub fn rebuild_fts(&self) -> Result<(usize, usize)> {
+        // Clear existing FTS
+        self.conn.execute("DELETE FROM docs_fts", []).map_err(StorageError::from)?;
+
+        let mut stmt = self.conn.prepare(
+            "SELECT id, fts_key, fts_data, fts_tags, fts_synonyms FROM docs_meta"
+        ).map_err(StorageError::from)?;
+
+        let rows: Vec<(i64, String, String, String, String)> = stmt.query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?))
+        }).map_err(StorageError::from)?
+        .filter_map(|r| r.ok())
+        .collect();
+
+        let count = rows.len();
+        for (id, fts_key, fts_data, fts_tags, fts_synonyms) in &rows {
+            self.conn.execute(
+                "INSERT INTO docs_fts(rowid, fts_key, fts_data, fts_tags, fts_synonyms) VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![id, fts_key, fts_data, fts_tags, fts_synonyms],
+            ).map_err(StorageError::from)?;
+        }
+
+        Ok((count, count))
+    }
 }
 
 fn is_duplicate_column_error(e: &rusqlite::Error) -> bool {

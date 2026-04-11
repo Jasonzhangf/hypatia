@@ -1,8 +1,11 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::path::PathBuf;
+use std::collections::HashMap;
 
 use crate::engine::Evaluator;
+use crate::embed;
 use crate::error::{HypatiaError, Result};
 use crate::hybrid::{merge_hybrid, HybridResult};
 use crate::miner::{Chunker, MinerConfig, Scanner, Watcher};
@@ -10,6 +13,7 @@ use crate::miner::scanner::detect_lang;
 use crate::model::*;
 use crate::service::{KnowledgeService, StatementService};
 use crate::storage::{ShelfManager, Storage};
+use crate::vector::VectorStore;
 
 /// Vector result for display
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,19 +27,46 @@ pub struct VectorSearchResult {
 
 pub struct Lab {
     shelf_manager: ShelfManager,
+    vector_stores: HashMap<String, VectorStore>,
 }
 
 impl Lab {
     pub fn new() -> Result<Self> {
         let mut shelf_manager = ShelfManager::new();
         shelf_manager.ensure_default()?;
-        Ok(Self { shelf_manager })
+        Ok(Self {
+            shelf_manager,
+            vector_stores: HashMap::new(),
+        })
     }
 
     // --- Shelf operations ---
 
     pub fn connect_shelf(&mut self, path: &Path, name: Option<&str>) -> Result<String> {
-        self.shelf_manager.connect(path, name)
+        let shelf_name = self.shelf_manager.connect(path, name)?;
+        // Also open vector store
+        let vec_path = path.join("vectors.sqlite");
+        if let Ok(store) = VectorStore::open(&vec_path) {
+            self.vector_stores.insert(shelf_name.clone(), store);
+        }
+        Ok(shelf_name)
+    }
+
+    /// Ensure a shelf is connected (auto-create if needed).
+    /// Shelf directory: ~/.hypatia/shelves/<name>/
+    pub fn ensure_shelf(&mut self, name: &str) -> Result<()> {
+        if self.shelf_manager.get(name).is_some() {
+            return Ok(());
+        }
+        let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        let shelf_path = home.join(".hypatia").join("shelves").join(name);
+        std::fs::create_dir_all(&shelf_path)?;
+        let shelf_name = self.shelf_manager.connect(&shelf_path, Some(name))?;
+        let vec_path = shelf_path.join("vectors.sqlite");
+        if let Ok(store) = VectorStore::open(&vec_path) {
+            self.vector_stores.insert(shelf_name, store);
+        }
+        Ok(())
     }
 
     pub fn disconnect_shelf(&mut self, name: &str) -> Result<()> {
@@ -133,21 +164,18 @@ impl Lab {
         shelf_ref.execute_search(query, opts)
     }
 
-    // --- Hybrid Search (FTS + Vector placeholder) ---
+    // --- Hybrid Search (FTS + Vector) ---
 
-    pub fn hybrid_search(&self, shelf: &str, query: &str, limit: i64) -> Result<Vec<HybridResult>> {
+    pub fn hybrid_search(&mut self, shelf: &str, query: &str, limit: i64) -> Result<Vec<HybridResult>> {
+        self.ensure_shelf(shelf)?;
+
         // 1. FTS search
-        let shelf_ref = self.shelf_manager.get(shelf).ok_or_else(|| {
-            HypatiaError::Shelf(format!("shelf '{shelf}' is not connected"))
-        })?;
-        let fts_results = shelf_ref.execute_search(query, &SearchOpts {
+        let fts_results = self.search(shelf, query, &SearchOpts {
             catalog: None,
             limit,
             offset: 0,
         })?;
 
-        // Convert FTS results to hybrid format
-        // Note: row is already a Map<String, Value>, not a Value that needs as_object()
         let fts_items: Vec<(String, String, String, Option<String>, f64)> = fts_results.rows.iter()
             .filter_map(|row| {
                 let source = row.get("name").or_else(|| row.get("key")).and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -157,8 +185,21 @@ impl Lab {
             })
             .collect();
 
-        // 2. Vector search (placeholder - returns empty for now)
-        let vec_items: Vec<(String, String, String, Option<String>, f64)> = Vec::new();
+        // 2. Vector search
+        let vec_items = if let Some(vec_store) = self.vector_stores.get(shelf) {
+            let query_emb = embed::embed(query);
+            match vec_store.search(&query_emb, limit, 0) {
+                Ok(results) => results.into_iter()
+                    .map(|r| (r.source, r.lang, r.text, r.symbol, r.score))
+                    .collect(),
+                Err(e) => {
+                    eprintln!("[hypatia] Vector search error: {}", e);
+                    Vec::new()
+                }
+            }
+        } else {
+            Vec::new()
+        };
 
         // 3. Merge with RRF
         Ok(merge_hybrid(fts_items, vec_items, 60))
@@ -174,6 +215,8 @@ impl Lab {
         chunk_size: usize,
         _include_hidden: bool,
     ) -> Result<usize> {
+        self.ensure_shelf(shelf)?;
+
         let config = MinerConfig {
             root: path.to_path_buf(),
             max_file_size: max_size,
@@ -193,8 +236,14 @@ impl Lab {
         })?;
         let mut svc = KnowledgeService::new(shelf_ref);
 
+        // Get vector store for this shelf (if available)
+        let vec_store = self.vector_stores.get(shelf);
+
         for file in files {
-            let content = std::fs::read_to_string(&file.path)?;
+            let content = match std::fs::read_to_string(&file.path) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
             let lang = detect_lang(&file.path);
             let source_rel = file.path.strip_prefix(path)
                 .unwrap_or(&file.path)
@@ -214,6 +263,28 @@ impl Lab {
                 }
 
                 let _ = svc.create(&kn_name, kn_content);
+
+                // Store embedding in vector store
+                if let Some(vs) = vec_store {
+                    let embedding = embed::embed(&chunk.text);
+                    let sha = {
+                        use std::hash::{Hash, Hasher};
+                        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                        chunk.text.hash(&mut hasher);
+                        format!("{:x}", hasher.finish())
+                    };
+                    let _ = vs.upsert(
+                        &source_rel,
+                        &lang,
+                        &chunk.text,
+                        None,
+                        &sha,
+                        chunk.start_line,
+                        chunk.end_line,
+                        &embedding,
+                    );
+                }
+
                 total_chunks += 1;
             }
         }
@@ -254,14 +325,38 @@ impl Lab {
         let statement_count = shelf_ref.duckdb.statement_count()?;
         let fts_count = shelf_ref.sqlite.doc_count()?;
 
-        let mut output = String::new();
-        output.push_str("═══ Hypatia Status ═══\n");
-        output.push_str(&format!("Shelves: {}\n", shelf_count));
-        output.push_str(&format!("Knowledge entries: {}\n", knowledge_count));
-        output.push_str(&format!("Statements: {}\n", statement_count));
-        output.push_str(&format!("FTS indexed docs: {}\n", fts_count));
-        output.push_str("═══════════════════════");
-        Ok(output)
+        let vec_count = if let Some(vs) = self.vector_stores.get(shelf) {
+            vs.count().unwrap_or(0)
+        } else {
+            0
+        };
+
+        let mut report = String::new();
+        report.push_str("════════════════════════\n");
+        report.push_str(&format!("Shelves connected: {}\n", shelf_count));
+        for s in &shelves {
+            report.push_str(&format!("  • {s}\n"));
+        }
+        report.push_str(&format!("Knowledge entries: {}\n", knowledge_count));
+        report.push_str(&format!("Statements: {}\n", statement_count));
+        report.push_str(&format!("FTS documents: {}\n", fts_count));
+        report.push_str(&format!("Vector entries: {}\n", vec_count));
+
+        if knowledge_count != fts_count {
+            report.push_str(&format!("[WARN] FTS count ({}) != Knowledge count ({})\n", fts_count, knowledge_count));
+            report.push_str("  → Run: hypatia rebuild-fts <shelf>\n");
+        } else {
+            report.push_str("[OK] FTS index matches knowledge count\n");
+        }
+
+        if vec_count > 0 {
+            report.push_str(&format!("[OK] Vector search: {} embeddings indexed\n", vec_count));
+        } else {
+            report.push_str("[INFO] Vector search: no embeddings yet (run mine to generate)\n");
+        }
+
+        report.push_str("════════════════════════");
+        Ok(report)
     }
 
     // --- Doctor ---
@@ -285,24 +380,56 @@ impl Lab {
             report.push_str("[OK] FTS index matches knowledge count\n");
         }
 
-        report.push_str("[INFO] Vector search: requires embedding model setup\n");
+        // Check 2: Vector store
+        let vec_count = if let Some(vs) = self.vector_stores.get(shelf) {
+            vs.count().unwrap_or(0)
+        } else {
+            0
+        };
+
+        if vec_count > 0 {
+            report.push_str(&format!("[OK] Vector store: {} embeddings\n", vec_count));
+        } else {
+            report.push_str("[INFO] Vector store: no embeddings (run 'mine' to generate)\n");
+        }
+
         report.push_str("════════════════════════");
         Ok(report)
     }
 
-    // --- Vector Search (placeholder) ---
+    // --- Vector Search ---
 
-    pub fn vector_search(&self, _shelf: &str, _query: &str, _limit: i64) -> Result<Vec<VectorSearchResult>> {
-        // Placeholder - requires embedding model setup
-        // TODO: integrate with VectorStore once embedding is configured
-        Ok(Vec::new())
+    pub fn vector_search(&mut self, shelf: &str, query: &str, limit: i64) -> Result<Vec<VectorSearchResult>> {
+        self.ensure_shelf(shelf)?;
+
+        let vec_store = self.vector_stores.get(shelf).ok_or_else(|| {
+            HypatiaError::Shelf(format!("No vector store for shelf '{shelf}'"))
+        })?;
+
+        let query_embedding = embed::embed(query);
+        let results = vec_store.search(&query_embedding, limit, 0)?;
+
+        Ok(results.into_iter().map(|r| VectorSearchResult {
+            source: r.source,
+            lang: r.lang,
+            text: r.text,
+            symbol: r.symbol,
+            score: r.score,
+        }).collect())
     }
 
     // --- Init Library ---
 
     pub fn init_library(&mut self, path: &Path) -> Result<()> {
-        // Ensure default shelf is connected at the given path
         self.shelf_manager.connect(path, Some("default"))?;
         Ok(())
+    }
+
+    /// Rebuild FTS index from existing docs_meta
+    pub fn rebuild_fts(&self, shelf: &str) -> Result<(usize, usize)> {
+        let shelf_ref = self.shelf_manager.get(shelf).ok_or_else(|| {
+            HypatiaError::Shelf(format!("shelf '{shelf}' is not connected"))
+        })?;
+        shelf_ref.sqlite.rebuild_fts()
     }
 }

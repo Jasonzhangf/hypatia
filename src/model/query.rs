@@ -44,9 +44,19 @@ impl QueryResult {
 }
 
 /// Options for search operations.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct SearchOpts {
     pub catalog: Option<String>,
     pub limit: i64,
     pub offset: i64,
+}
+
+impl Default for SearchOpts {
+    fn default() -> Self {
+        Self {
+            catalog: None,
+            limit: 100,
+            offset: 0,
+        }
+    }
 }

@@ -12832,3 +12832,1596 @@ sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
 model: gpt-5.4
 provider: openai-responses
 -->
+
+### User · 2026/04/11 00:03:04
+
+daemon 是自动监听所有注册项目的更新吗？
+⚠ /Users/fanzhang/.codex/skills/hypatia-usage/SKILL.md: missing YAML frontmatter delimited by ---
+
+⚠ Skipped loading 1 skill(s) due to invalid SKILL.md files.
+
+⚠ /Users/fanzhang/.codex/skills/hypatia-usage/SKILL.md: missing YAML frontmatter delimited by ---
+
+⚠ Skipped loading 1 skill(s) due to invalid SKILL.md files.
+
+⚠ /Users/fanzhang/.codex/skills/hypatia-usage/SKILL.md: missing YAML frontmatter delimited
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T000304462-112153-6290
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 00:03:09
+
+完成，Jason。全部已部署：
+
+## 完成状态
+
+| 项目 | 状态 |
+|------|------|
+| GitHub 推送 | ✅ `https://github.com/Jasonzhangf/hypatia.git` (commit `c340b2c`) |
+| 全局安装 | ✅ `~/.cargo/bin/hypatia` (49MB) |
+| Skills | ✅ `~/.codex/skills/hypatia-usage/SKILL.md` |
+| Daemon 验证 | ✅ `hypatia daemon-status` 正常响应 |
+
+## 可用命令
+
+```bash
+hypatia --help              # 完整命令列表
+hypatia init                # 下载 embedding 模型
+hypatia project add <name>  # 注册项目
+hypatia project-mine <name> # CLI 阻塞索引
+hypatia daemon-start        # 后台监控
+hypatia daemon-status       # 状态检查
+hypatia hybrid <query>      # 混合搜索
+```
+
+## 下一步建议
+
+```bash
+# 1. 初始化（下载模型）
+hypatia init
+
+# 2. 注册 routecodex 项目
+hypatia project add routecodex --wing code --room rust
+
+# 3. 首次全量索引
+hypatia project-mine routecodex
+
+# 4. 启动 daemon（后台持续监控）
+hypatia daemon-start
+```
+
+<!-- cache-meta
+requestId: openai-responses-ali-coding-plan.key1-glm-5-20260411T000235093-112148-6285
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: glm-5
+provider: anthropic-messages
+finishReason: stop
+-->
+
+### User · 2026/04/11 00:03:30
+
+daemon 是自动监听所有注册项目的更新吗？
+⚠ /Users/fanzhang/.codex/skills/hypatia-usage/SKILL.md: missing YAML frontmatter delimited by ---
+
+⚠ Skipped loading 1 skill(s) due to invalid SKILL.md files.
+
+⚠ /Users/fanzhang/.codex/skills/hypatia-usage/SKILL.md: missing YAML frontmatter delimited by ---
+
+⚠ Skipped loading 1 skill(s) due to invalid SKILL.md files.
+
+⚠ /Users/fanzhang/.codex/skills/hypatia-usage/SKILL.md: missing YAML frontmatter delimited
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T000330667-112157-6294
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 00:04:53
+
+**是的，Jason。**
+
+Daemon 会自动监听**所有已注册且开启了 `auto-watch` 的项目**。具体流程：
+
+```bash
+# 1. 注册项目（默认 auto_watch=false）
+hypatia project add routecodex --wing code --room rust
+
+# 2. 开启自动监控
+hypatia project auto-watch routecodex --enable
+
+# 3. 启动 daemon（自动监听所有 auto_watch=true 的项目）
+hypatia daemon-start
+```
+
+查看 `daemon-start` 输出会显示：
+
+```
+Starting daemon, watching 3 projects:
+  - routecodex (/Users/fanzhang/github/routecodex)
+  - dify (/Users/fanzhang/github/dify)
+  - obsidian (/Users/fanzhang/Documents/obsidian)
+```
+
+**关键点**：
+- 只有 `auto_watch=true` 的项目会被监听
+- `daemon-start` 会自动加载 `~/.hypatia/projects.json` 中所有项目
+- 文件变更（create/modify/remove）触发增量索引
+- 支持运行状态持久化（PID 文件），重启后可检测 daemon 是否存活
+
+<!-- cache-meta
+requestId: openai-responses-ali-coding-plan.key1-glm-5-20260411T000432103-112166-6303
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: glm-5
+provider: anthropic-messages
+finishReason: stop
+-->
+
+### User · 2026/04/11 00:08:18
+
+这些需要详细写入 hypatia skills， 改名为 hypatia flow skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T000818550-112192-6329
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 00:11:34
+
+**Jason，两个问题：**
+
+### 1. Daemon 自动监听
+
+**是的**，`daemon-start` 会自动监听所有 `auto_watch=true` 的项目。流程：
+
+```bash
+# 1. 注册项目时默认 auto_watch=false
+hypatia project add routecodex --wing code --room rust
+
+# 2. 需要显式开启
+hypatia project auto-watch routecodex --enable
+
+# 3. daemon-start 才会监听
+hypatia daemon-start
+# 输出：Starting daemon, watching 3 projects:
+#   - routecodex (/Users/fanzhang/github/routecodex)
+#   - dify (/Users/fanzhang/github/dify)
+```
+
+### 2. SKILL.md 缺少 YAML frontmatter
+
+已修复，重新创建了 `hypatia-flow` skill（改名），包含 565 行完整文档。
+
+现在 skill 文件有正确的 YAML frontmatter：
+
+```yaml
+---
+name: hypatia-flow
+description: Hypatia CLI 完整工作流 - 项目注册、daemon 自动监控、搜索模式、多项目管理
+---
+```
+
+**已完成的改动：**
+- `~/.codex/skills/hypatia-flow/SKILL.md` — 565 行完整工作流文档
+- 包含：快速开始、项目管理、auto-watch 开关、daemon 详细行为、索引模式对比、搜索模式详解、跳过规则、多项目管理、完整工作流示例、常见问题排查、命令速查表、文件位置
+
+<!-- cache-meta
+requestId: openai-responses-ali-coding-plan.key1-glm-5-20260411T001116449-112226-6363
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: glm-5
+provider: anthropic-messages
+finishReason: stop
+-->
+
+### User · 2026/04/11 08:39:17
+
+### 架不构上差 异
+  | 维 度y | Hypatia | MemPalace |
+  |------|---------|-----------|
+  | 存项储目引注擎册 | DuckDB + SQLite（y结a构i化 ）o | 本t地r JSONL（e抽
+屉 式 ）- |
+  | 索c引n模e式t | 全s量e扫f描不 → 知入识 提e取a → FTS + 向 量  | 文 件
+扫 描. → 抽n屉c分e发" → 关：键所字有匹结配果 |
+  | 搜t索O方l式， | FTS 精 确F + 向果量 语e义  + Hybrid RRF 融 合  | 关
+键 字.模F糊S匹不配一 |
+  | 知个识文提档取未 | ✅f 自取动知提识取  knowledge entries + statements（
+三 元.组无）法 | ❌s 无l知 识 提 取 ，-仅h文l件 级o索t引c |
+  | 返f回u格t式全 | JSON（ source/fts_score/vector_score/combined_scor
+e）  | 文 本 （ 抽 屉 路 径  + 文 件 内 容 摘 要 ）  |
+  ### 本 项 目 索 引 结 果
+  | 指*标  | Hypatia (default shelf) | MemPalace (finger wing) |
+  |------|------------------------|------------------------|
+  | 文 档 数  | 15,963 FTS docs | 1,337 抽 屉  |
+  | 知t识 条e目t | 15,961 | N/A |
+  | Room 分 类  | 无 （ 全 进  default）  | code/tests/docs/config/me
+mory |
+  | 项u目i隔.离: | ❌  routecodex 索 引 进 了  default， routecodex s
+helf 连 不 上  | ✅  wing/room 清 晰 隔 离  |
+  ### Hypatia 发 现 的 问 题
+  1. 项 目 注 册 后  shelf 不 生 效 ： hypatia connect routecodex 成
+功 但  --shelf routecodex 搜 索 报  "not
+     connected"， 索 引 全 部 落 入  default shelf
+  2. 向 量 搜 索 未 启 用 ： 所 有 结 果  vector_score=null， matched
+_by=FtsOnly， 实 际 只 有  FTS 在 工 作
+  3. FTS 不 一 致 ： FTS count (15963) != Knowledge count (15961)，
+有  2 个 文 档 未 正 确 提 取 知 识
+  4. 无 法 按  shelf 搜 索 ： --shelf routecodex 参 数 无 效 ， 只 能
+搜  default 全 量
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T083917516-112381-6518
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:39:37
+
+### 架不构上差 异
+  | 维 度y | Hypatia | MemPalace |
+  |------|---------|-----------|
+  | 存项储目引注擎册 | DuckDB + SQLite（y结a构i化 ）o | 本t地r JSONL（e抽
+屉 式 ）- |
+  | 索c引n模e式t | 全s量e扫f描不 → 知入识 提e取a → FTS + 向 量  | 文 件
+扫 描. → 抽n屉c分e发" → 关：键所字有匹结配果 |
+  | 搜t索O方l式， | FTS 精 确F + 向果量 语e义  + Hybrid RRF 融 合  | 关
+键 字.模F糊S匹不配一 |
+  | 知个识文提档取未 | ✅f 自取动知提识取  knowledge entries + statements（
+三 元.组无）法 | ❌s 无l知 识 提 取 ，-仅h文l件 级o索t引c |
+  | 返f回u格t式全 | JSON（ source/fts_score/vector_score/combined_scor
+e）  | 文 本 （ 抽 屉 路 径  + 文 件 内 容 摘 要 ）  |
+  ### 本 项 目 索 引 结 果
+  | 指*标  | Hypatia (default shelf) | MemPalace (finger wing) |
+  |------|------------------------|------------------------|
+  | 文 档 数  | 15,963 FTS docs | 1,337 抽 屉  |
+  | 知t识 条e目t | 15,961 | N/A |
+  | Room 分 类  | 无 （ 全 进  default）  | code/tests/docs/config/me
+mory |
+  | 项u目i隔.离: | ❌  routecodex 索 引 进 了  default， routecodex s
+helf 连 不 上  | ✅  wing/room 清 晰 隔 离  |
+  ### Hypatia 发 现 的 问 题
+  1. 项 目 注 册 后  shelf 不 生 效 ： hypatia connect routecodex 成
+功 但  --shelf routecodex 搜 索 报  "not
+     connected"， 索 引 全 部 落 入  default shelf
+  2. 向 量 搜 索 未 启 用 ： 所 有 结 果  vector_score=null， matched
+_by=FtsOnly， 实 际 只 有  FTS 在 工 作
+  3. FTS 不 一 致 ： FTS count (15963) != Knowledge count (15961)，
+有  2 个 文 档 未 正 确 提 取 知 识
+  4. 无 法 按  shelf 搜 索 ： --shelf routecodex 参 数 无 效 ， 只 能
+搜  default 全 量
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T083937087-112384-6521
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:39:48
+
+你的测试做的还不完备，修复后把测试做完
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T083948143-112386-6523
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:11
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085011772-112462-6599
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:18
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085018187-112463-6600
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:23
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085023371-112465-6602
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:28
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085023371-112465-6602
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:30
+
+你的测试做的还不完备，修复后把测试做完
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085030015-112466-6603
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:34
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085034030-112467-6604
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:37
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085037671-112468-6605
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:44
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085044892-112469-6606
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:46
+
+你的测试做的还不完备，修复后把测试做完
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085046474-112470-6607
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:52
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085052721-112471-6608
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:50:57
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085057274-112472-6609
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:03
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085103863-112473-6610
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:07
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085107776-112474-6611
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:11
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085111201-112475-6612
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:15
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085115856-112476-6613
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:19
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085119612-112478-6615
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:26
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085126265-112479-6616
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:32
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085132503-112480-6617
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:36
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085136665-112481-6618
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:42
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085142859-112483-6620
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:49
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085149322-112484-6621
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:54
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085149322-112484-6621
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:51:59
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085159074-112486-6623
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:52:03
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085203159-112487-6624
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:52:07
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085207029-112488-6625
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:52:13
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085213272-112490-6627
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:52:26
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085226617-112492-6629
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:52:36
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085236792-112494-6631
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:52:46
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085246067-112497-6634
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:53:01
+
+你的测试做的还不完备，修复后把测试做完
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085301207-112498-6635
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:55:22
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085522649-112511-6648
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:55:31
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085531066-112512-6649
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:55:36
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085531066-112512-6649
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:55:48
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085548092-112513-6650
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:55:54
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085554386-112514-6651
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:56:24
+
+You are fixing 4 critical bugs in the Hypatia CLI project at /Users/fanzhang/Documents/github/hypatia.
+
+## The 4 Bugs
+
+### Bug 1: Shelf not connected when using project-mine or search commands
+When `project-mine` or `hybrid search` is called with a shelf name like "routecodex", the shelf is not connected because only "default" gets auto-connected in `Lab::new()`. 
+
+**Fix**: Add `ensure_shelf(&mut self, name: &str)` method to `Lab` in `src/lab.rs`. This method checks if a shelf is already connected, and if not, creates the directory `~/.hypatia/shelves/<name>/` and connects it. Then call `ensure_shelf` in the CLI commands before any operation that uses a shelf name.
+
+### Bug 2: Vector search returns empty (placeholder only)
+The `vector_search` method in `src/lab.rs` at line ~295 is a placeholder that returns `Ok(Vec::new())`. The `hybrid_search` also has `let vec_items: Vec<...> = Vec::new()` - no actual vector search happens.
+
+**Fix**: 
+1. In `src/lab.rs`, add a `vector_stores: HashMap<String, VectorStore>` field to `Lab`.
+2. When connecting a shelf or ensuring a shelf, also open the `VectorStore` at `<shelf_path>/vectors.sqlite`.
+3. Implement real `vector_search` that calls `embed::embed(query)` to get query embedding, then calls `VectorStore::search()`.
+4. In `hybrid_search`, also call vector search and merge real results.
+5. In `mine_directory`, after creating each knowledge entry, also embed the chunk text and store it in the vector store.
+
+### Bug 3: Mining doesn't store embeddings
+`mine_directory` creates knowledge entries and FTS docs but never computes/stores embeddings.
+
+**Fix**: In `mine_directory`, after creating each knowledge entry, call `embed::embed(&chunk.text)` and store the result in the vector store.
+
+### Bug 4: FTS count mismatch (15963 vs 15961)
+This happens because FTS triggers auto-insert into docs_fts when docs_meta is updated, but the knowledge service upserts may have race conditions or missing FTS sync.
+
+**Fix**: Add a `rebuild_fts` comman... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085624491-112515-6652
+sessionId: 019d7a04-8b82-7210-a61f-081e7960d336
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:56:27
+
+你的测试做的还不完备，修复后把测试做完
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085627680-112516-6653
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 08:56:33
+
+<subagent_notification>
+{"agent_path":"019d7a04-8b82-7210-a61f-081e7960d336","status":"shutdown"}
+</subagent_notification>
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T085633581-112517-6654
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
