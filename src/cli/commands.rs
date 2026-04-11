@@ -257,6 +257,8 @@ pub fn run() -> crate::error::Result<()> {
 
     match cli.command {
         None | Some(Commands::Repl) => {
+            // REPL: connect to default shelf for interactive use
+            lab.ensure_shelf("default")?;
             let mut repl = super::repl::Repl::new(lab)?;
             repl.run()
         }
@@ -285,6 +287,7 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             }
         }
         Commands::Query { jse, shelf } => {
+            lab.ensure_shelf(&shelf)?;
             let value: serde_json::Value = serde_json::from_str(&jse)?;
             let result = lab.query(&shelf, &value)?;
             println!("{}", serde_json::to_string_pretty(&result)?);
@@ -296,6 +299,7 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             synonyms,
             shelf,
         } => {
+            lab.ensure_shelf(&shelf)?;
             let tag_vec: Vec<String> = if tags.is_empty() {
                 vec![]
             } else {
@@ -317,12 +321,14 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             println!("Created knowledge: {}", knowledge.name);
         }
         Commands::KnowledgeGet { name, shelf } => {
+            lab.ensure_shelf(&shelf)?;
             match lab.get_knowledge(&shelf, &name)? {
                 Some(k) => println!("{}", serde_json::to_string_pretty(&k)?),
                 None => println!("Knowledge '{}' not found", name),
             }
         }
         Commands::KnowledgeDelete { name, shelf } => {
+            lab.ensure_shelf(&shelf)?;
             lab.delete_knowledge(&shelf, &name)?;
             println!("Deleted knowledge: {}", name);
         }
@@ -332,6 +338,7 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             object,
             shelf,
         } => {
+            lab.ensure_shelf(&shelf)?;
             let key = StatementKey::new(subject, predicate, object);
             lab.delete_statement(&shelf, &key)?;
             println!("Deleted statement: {}", key.to_csv_key());
@@ -344,6 +351,7 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             synonyms,
             shelf,
         } => {
+            lab.ensure_shelf(&shelf)?;
             let key = StatementKey::new(subject, predicate, object);
             let syn = if let Some(s) = synonyms {
                 let map: std::collections::HashMap<String, Vec<String>> =
@@ -366,6 +374,7 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             offset,
             shelf,
         } => {
+            lab.ensure_shelf(&shelf)?;
             let opts = SearchOpts {
                 catalog,
                 limit,
@@ -375,10 +384,12 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Commands::Vsearch { query, shelf, limit } => {
+            lab.ensure_shelf(&shelf)?;
             let result = lab.vector_search(&shelf, &query, limit)?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Commands::Hybrid { query, shelf, limit } => {
+            lab.ensure_shelf(&shelf)?;
             let result = lab.hybrid_search(&shelf, &query, limit)?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
@@ -396,18 +407,22 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             chunk_size,
             hidden,
         } => {
+            lab.ensure_shelf(&shelf)?;
             let count = lab.mine_directory(&shelf, &path, max_size, chunk_size, hidden)?;
             println!("Indexed {} chunks from {}", count, path.display());
         }
         Commands::Watch { path, shelf } => {
+            lab.ensure_shelf(&shelf)?;
             let (new, modified, deleted) = lab.incremental_scan(&shelf, &path)?;
             println!("Watch results: +{} new, ~{} modified, -{} deleted", new, modified, deleted);
         }
         Commands::Status { shelf } => {
+            lab.ensure_shelf(&shelf)?;
             let status = lab.get_status(&shelf)?;
             println!("{}", status);
         }
         Commands::Doctor { shelf } => {
+            lab.ensure_shelf(&shelf)?;
             let report = lab.run_doctor(&shelf)?;
             println!("{}", report);
         }
@@ -453,6 +468,9 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             println!("Config file: {}/.hypatia/project.toml", project.root.display());
         }
         Commands::ProjectMine { name } => {
+            let shelf_name = name.clone();
+            lab.ensure_shelf(&shelf_name)?;
+
             let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
             let hypatia_home = home.join(".hypatia");
             let manager = ProjectManager::new(&hypatia_home)?;
@@ -503,6 +521,7 @@ fn execute_command(lab: &mut Lab, cmd: Commands) -> crate::error::Result<()> {
             daemon.rescan()?;
         }
         Commands::RebuildFts { shelf } => {
+            lab.ensure_shelf(&shelf)?;
             let (meta_count, fts_count) = lab.rebuild_fts(&shelf)?;
             println!("Rebuilt FTS index: {} docs_meta -> {} docs_fts entries", meta_count, fts_count);
         }

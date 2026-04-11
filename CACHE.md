@@ -14425,3 +14425,1267 @@ sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
 model: gpt-5.4
 provider: openai-responses
 -->
+
+### Assistant · 2026/04/11 09:28:24
+
+**Jason，全部完成。** 已推送到 `https://github.com/Jasonzhangf/hypatia.git`，commit `0035d01`。
+
+## 本次修复内容
+
+### 1. FTS 搜索 SQL 修复
+**问题**：`WHERE docs_fts MATCH ?1` 在 JOIN 中无法正确解析
+**修复**：改用 `docs_fts` 作为主表 + `WHERE docs_fts MATCH ?1`（FTS5 要求主表必须是虚拟表）
+
+### 2. SearchOpts 默认 limit
+**问题**：`#[derive(Default)]` 导致 `limit=0`，返回空结果
+**修复**：手动 impl Default，设 `limit=100`
+
+### 3. 向量搜索 wiring
+**问题**：`hybrid` 和 `vsearch` 返回 `vector_score=null`，embeddings 未使用
+**修复**：在 `lab.rs` 中调用 `embedder.embed()`，存入 `docs_meta.embedding` blob
+
+### 4. rebuild-fts 命令
+**问题**：FTS count != Knowledge count（triggers 可能未正确触发）
+**修复**：新增 `rebuild-fts --shelf <name>` 重建 FTS 表
+
+### 5. 测试通过
+- 76 tests 全部 passing
+- Release build `target/release/hypatia`
+- 安装到 `~/.cargo/bin/hypatia v0.2.0`
+
+### 6. Skill 更新
+- `~/.codex/skills/hypatia-flow/SKILL.md` — 565 行完整文档
+- 包含：快速开始、项目管理、daemon、搜索详解、命令速查表、故障排查
+
+---
+
+**验证步骤**（建议你手动测试）：
+
+```bash
+# 1. 初始化
+~/.cargo/bin/hypatia init
+
+# 2. 注册项目
+~/.cargo/bin/hypatia project add routecodex --root ~/github/routecodex --wing code --room rust
+
+# 3. 首次索引
+~/.cargo/bin/hypatia project mine routecodex
+
+# 4. 搜索测试
+~/.cargo/bin/hypatia search "error" --shelf routecodex
+~/.cargo/bin/hypatia hybrid "数据库" --shelf routecodex
+
+# 5. 健康检查
+~/.cargo/bin/hypatia doctor --shelf routecodex
+```
+
+<!-- cache-meta
+requestId: openai-responses-ali-coding-plan.key1-glm-5-20260411T092806188-112709-6846
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: glm-5
+provider: anthropic-messages
+finishReason: stop
+-->
+
+### User · 2026/04/11 10:02:41
+
+我有几个问题：
+1. indexing 是否可以选择后台闲时 daemon indexing？
+2. 是否多项目都是后台 indexing？如何使用多项目？如何添加和删除一个路径的 indexing？如何对某个路径进行搜索？是否可以选择某些路径只做向量，有些路径多种搜索？
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100241386-112845-6982
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:03:03
+
+You are performing a CONTEXT CHECKPOINT COMPACTION. Create a handoff summary for another LLM that will resume the task.
+
+Include:
+- Current progress and key decisions made
+- Important context, constraints, or user preferences
+- What remains to be done (clear next steps)
+- Any critical data, examples, or references needed to continue
+
+Be concise, structured, and focused on helping the next LLM seamlessly continue the work.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100303604-112846-6983
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 10:03:45
+
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** with per-path control
+- "有些路径只做向量，有些路径多种搜索" = per-path search mode config
+
+**Next Steps**
+1. Design `IndexingPolicy` enum (Realtime, Idle {cpu_threshold, io_threshold}, Disabled)
+2. Add `project path-add <project> <path> --mode <fts|vector|hybrid>` 
+3. Add per-path search mode storage (in `projects.json` or separate `paths.json`)
+4. Modify daemon to respect idle thresholds
+5. Add `--path` filter t... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-ali-coding-plan.key1-kimi-k2.5-20260411T100303604-112846-6983
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: kimi-k2.5
+provider: anthropic-messages
+finishReason: stop
+-->
+
+### User · 2026/04/11 10:03:45
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100345503-112847-6984
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:03:52
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100352501-112848-6985
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:04:01
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100401618-112849-6986
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:04:12
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100412656-112850-6987
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:04:20
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100420824-112851-6988
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:04:25
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100425508-112853-6990
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:04:31
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100431321-112854-6991
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:04:38
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100438530-112855-6992
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:04:44
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100444032-112857-6994
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:05:05
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100505323-112860-6997
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:05:18
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100518369-112862-6999
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:05:25
+
+Another language model started to solve this problem and produced a summary of its thinking process. You also have access to the state of the tools that were used by that language model. Use this to build on the work that has already been done and avoid duplicating work. Here is the summary produced by the other language model, use the information in this summary to assist with your own analysis:
+**HANDOFF SUMMARY — Hypatia Multi-Project Indexing Enhancement**
+
+**Current Status**
+- Hypatia v0.2.0 pushed to `https://github.com/Jasonzhangf/hypatia.git` (commit `0035d01`)
+- All 76 tests passing, release build working
+- Installed to `~/.cargo/bin/hypatia`
+
+**User's 4 Questions About Multi-Project/Daemon Behavior**
+
+1. **后台闲时 daemon indexing** — 当前 Daemon 是实时 fsnotify 监听，无"闲时"调度
+2. **多项目后台 indexing** — 当前支持：daemon 自动监听所有 `auto_watch=true` 的项目
+3. **添加/删除路径 indexing** — 当前支持 `project add/remove`，但用户问的是"路径"级别的增删（非项目级）
+4. **路径级搜索 + 搜索模式选择** — 当前不支持按子路径搜索，也不支持 per-path 搜索模式配置（向量 vs 混合）
+
+**Current Implementation**
+```rust
+// model/project.rs
+pub struct Project {
+    pub name: String,
+    pub root: PathBuf,      // 项目根目录
+    pub wing: String,
+    pub room: String,
+    pub shelf: String,      // 对应 shelf 名称
+    pub auto_watch: bool,   // 是否被 daemon 监听
+}
+```
+
+**What's Missing vs User Wants**
+
+| User Want | Current | Gap |
+|-----------|---------|-----|
+| 闲时调度 (idle-time indexing) | 实时 fsnotify | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 (非项目级) | 只能 add/remove 整个项目 | ❌ 不支持单路径 |
+| 子路径搜索 | `--shelf` 搜索整个 shelf | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 全局 `init` 后所有用向量 | ❌ 无 per-path 配置 |
+
+**Key Files to Modify**
+- `src/model/project.rs` — 添加 `indexing_policy: IndexingPolicy` (Realtime/Idle/Disabled)
+- `src/daemon/watcher.rs` — 添加 CPU/IO 负载检查，闲时触发
+- `src/cli/commands.rs` — 添加 `project path-add`, `project path-remove`, `search --path`
+- `src/miner/scanner.rs` — 支持 per-path 配置（skip_patterns, search_mode）
+
+**User Preference**
+- Treat Hypatia as **permanent tool**
+- Wants **flexible multi-project workflow** ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100525537-112864-7001
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 10:05:51
+
+Jason，根据我对代码的全面审查，以下是实际情况：
+
+## 1. 后台闲时 daemon indexing？
+
+**当前是实时 fsnotify，不是闲时调度。**
+
+- Daemon 使用 `notify` crate 实时监听文件变化
+- 文件变动后 **2秒 debounce** 即触发增量索引
+- **没有** CPU/IO 负载感知，没有"闲时才索引"的机制
+
+如果要闲时调度，需要加入系统负载检查（CPU usage, disk IO），空闲时才触发 batch indexing。
+
+## 2. 多项目后台 indexing？
+
+**✅ 支持。** Daemon 启动时扫描 `projects.json`，所有 `auto_watch=true` 的项目都会被同时监听：
+
+```bash
+hypatia project add projA --root ~/code/projA
+hypatia project add projB --root ~/code/projB
+hypatia project auto-watch projA --enable
+hypatia project auto-watch projB --enable
+hypatia daemon-start  # 同时监控两个项目
+```
+
+## 3. 如何添加/删除路径级别的 indexing？
+
+**❌ 当前不支持路径级别，只能项目级别。**
+
+| 操作 | 当前支持 | 说明 |
+|------|---------|------|
+| 添加整个项目 | ✅ `project add` | 整个 root 被索引 |
+| 删除整个项目 | ✅ `project remove` | 整个项目移除 |
+| 添加项目内子路径 | ❌ | 不支持 |
+| 排除项目内子路径 | ⚠️ 部分支持 | 通过 `skip_patterns` 或 `.hypatia_ignore` |
+| 注册不存在的目录 | ❌ | `canonicalize()` 要求目录存在 |
+
+## 4. 如何对某个路径进行搜索？
+
+**❌ 不支持 `--path` 过滤。** 搜索只能按 `--shelf`（整个 shelf）进行。`search`、`vsearch`、`hybrid` 都没有 path 过滤参数。
+
+## 5. 能否选择某些路径只做向量、某些路径多种搜索？
+
+**❌ 不支持 per-path 搜索模式配置。** 当前搜索模式是命令级别决定的（`search` = FTS, `vsearch` = 向量, `hybrid` = 混合），不是 per-path 配置。
+
+## 差距总结
+
+| 你的需求 | 当前状态 | 需要开发 |
+|---------|---------|---------|
+| 闲时调度（CPU/IO 低时索引） | ❌ 实时触发 | 系统负载检测 + 延迟队列 |
+| 路径级增删（非项目级） | ❌ 只支持项目级 | `project path-add/path-remove` + 子路径存储 |
+| 按子路径搜索 | ❌ 无 `--path` | search/vsearch/hybrid 加 `--path` 过滤 |
+| per-path 搜索模式 | ❌ 全局统一 | per-path `IndexingPolicy` 配置 |
+
+**当前多项目工作流是够用的**（注册 → enable auto-watch → daemon-start → 按 shelf 搜索），但路径级精细控制和闲时调度还没有。需要我实现这些功能吗？
+
+<!-- cache-meta
+requestId: openai-responses-qwen.3-geetasamoda-qwen3.6-plus-20260411T100525537-112864-7001
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: qwen3.6-plus
+provider: openai-chat
+finishReason: stop
+-->
+
+### User · 2026/04/11 10:06:30
+
+还有个问题，现在我们的数据保存在哪里？不同的 fts 和嵌入式放在哪里？
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100630299-112870-7007
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:08:28
+
+我正在 mine！！
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100828777-112896-7033
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:08:39
+
+你他妈～
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100839660-112897-7034
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 10:09:01
+
+Jason，这是当前 Hypatia 完整的数据存储布局：
+
+## 存储结构
+
+```
+~/.hypatia/
+├── projects.json              ← 项目注册表（名称、路径、wing/room/shelf、auto_watch）
+├── models/                    ← 嵌入模型（全局共享，下载一次）
+│   ├── config.json            │   612 B
+│   ├── tokenizer.json         │   457 KB
+│   └── model.safetensors      │   87 MB  (all-MiniLM-L6-v2, 384维)
+├── default/                   ← 默认 shelf（当前 main 索引落在这里）
+│   ├── data.duckdb            │   128 MB  ← 知识条目 + 三元组
+│   ├── data.duckdb.wal        │   11 MB   ← DuckDB WAL
+│   └── index.sqlite           │   188 MB  ← FTS 全文索引 (FTS5)
+└── shelves/
+    └── routecodex/            ← 项目独立 shelf
+        ├── data.duckdb        │   12 KB   ← 知识 + 三元组
+        ├── data.duckdb.wal    │   1.2 MB  ← WAL
+        ├── index.sqlite       │   2.7 MB  ← FTS 全文索引
+        └── vectors.sqlite     │   4.3 MB  ← 向量嵌入 (384维 BLOB)
+```
+
+## 每种数据对应的引擎
+
+| 数据类型 | 引擎 | 文件 | 位置 |
+|---------|------|------|------|
+| **知识条目 + 三元组** | DuckDB | `data.duckdb` | 每个 shelf 独立 |
+| **FTS 全文索引** | SQLite FTS5 | `index.sqlite` | 每个 shelf 独立 |
+| **向量嵌入** | SQLite (BLOB) | `vectors.sqlite` | 每个 shelf 独立 |
+| **嵌入模型** | 文件缓存 | `model.safetensors` 等 | 全局共享 `~/.hypatia/models/` |
+| **项目注册表** | JSON 文件 | `projects.json` | 全局 `~/.hypatia/` |
+
+## 关键问题：default shelf 数据异常
+
+实际观察到：**default shelf 有 ~16K 条索引（188 MB），routecodex shelf 只有 ~1.8K 条（2.7 MB）**。这说明之前的问题确实存在——大部分索引被错误地写入 `default` shelf，而非路由到项目自身的 shelf。
+
+另外有一个 `hypatia mine .` 进程（PID 24830）正在运行且锁住了 DuckDB，所以暂时无法访问。
+
+## Shelf 隔离机制
+
+代码中每个 shelf 是**完全独立的目录**，包含自己的三个数据库文件。项目通过 `project add` 注册时指定 shelf 名称（默认=项目名），`mine` 和搜索时通过 `--shelf <name>` 路由到对应目录。**向量、FTS、DuckDB 三存储按 shelf 隔离，互不影响。**
+
+<!-- cache-meta
+requestId: openai-responses-qwen.6-xfour8605-qwen3.6-plus-20260411T100815171-112895-7032
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: qwen3.6-plus
+provider: openai-chat
+finishReason: stop
+-->
+
+### Assistant · 2026/04/11 10:09:13
+
+Jason，对不起，是我错了。  
+你在 `mine` 的时候我去读状态，触发了 DuckDB 锁冲突，不该打断你。
+
+我现在先**不跑任何会碰库的命令**，直接回答你刚才的问题（基于代码与已知结构）：
+
+- **全局目录**：`~/.hypatia/`
+  - `projects.json`：项目注册信息
+  - `models/`：嵌入模型文件（`config.json` / `tokenizer.json` / `model.safetensors`）
+
+- **每个 shelf 的数据目录**（推荐路径）：
+  - `~/.hypatia/shelves/<shelf>/`
+    - `data.duckdb`：知识库/结构化数据（DuckDB）
+    - `index.sqlite`：**FTS 全文索引**（SQLite FTS5）
+    - `vectors.sqlite`：**向量与 embedding**（SQLite + BLOB）
+
+- **兼容/历史默认 shelf**：
+  - `~/.hypatia/default/`
+    - 也会有 `data.duckdb`、`index.sqlite`（有些旧流程会写这里）
+
+- **项目本地配置**：
+  - `<project>/.hypatia/project.toml`（项目级索引配置）
+  - `<project>/.hypatia_cache.json`（增量扫描缓存）
+
+你先安心让 mine 跑完，我这边不再动库。跑完你一句话，我再继续。
+
+<!-- cache-meta
+requestId: openai-responses-crs.key2-gpt-5.3-codex-20260411T100839660-112897-7034
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.3-codex
+provider: openai-responses
+finishReason: stop
+-->
+
+### User · 2026/04/11 10:09:13
+
+继续执行
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T100913350-112898-7035
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 10:10:44
+
+好的，我现在基于已完成的审查继续回答你刚才问的两个问题：
+
+---
+
+## 1. 数据存在哪里
+
+```
+~/.hypatia/
+├── projects.json              # 项目注册表（name/root/shelf/wing/room/auto_watch）
+├── models/                    # Embedding 模型
+│   ├── config.json
+│   ├── model.safetensors      # ~87MB
+│   └── tokenizer.json
+├── default/                   # 默认 shelf（历史兼容）
+│   ├── data.duckdb            # 知识条目 + 三元组
+│   └── index.sqlite           # FTS5 全文索引
+└── shelves/
+    └── <shelf_name>/          # 每个项目独立 shelf
+        ├── data.duckdb        # 知识条目 + 三元组（DuckDB）
+        ├── index.sqlite       # FTS5 全文索引（SQLite）
+        └── vectors.sqlite     # 向量 + embedding（SQLite BLOB）
+```
+
+**三种引擎对应文件**：
+- **DuckDB** `data.duckdb`：知识条目（Knowledge）+ 三元组（Statements），结构化查询
+- **SQLite FTS5** `index.sqlite`：FTS 全文搜索索引
+- **SQLite vectors** `vectors.sqlite`：embedding 向量（384 维 f32 BLOB），余弦相似度搜索
+
+项目本地配置：
+- `<project>/.hypatia/project.toml`：索引配置
+- `<project>/.hypatia_cache.json`：增量扫描缓存（sha256）
+
+---
+
+## 2. 你问的功能差距总结
+
+| 你的需求 | 当前状态 | 差距 |
+|---------|---------|------|
+| 闲时调度 | 实时 fsnotify 2s debounce | ❌ 无 CPU/IO 负载感知 |
+| 路径级增删 | 只能 add/remove 整个项目 | ❌ 不支持子路径 |
+| 按子路径搜索 | 只能按 `--shelf` 搜 | ❌ 无 `--path` 过滤 |
+| per-path 搜索模式 | 命令级决定模式 | ❌ 无 per-path 配置 |
+
+现在 mine 还没跑完（进程还在跑）。等你说跑完了，我再继续下一步。
+
+<!-- cache-meta
+requestId: openai-responses-qwen.4-jasonqueque-qwen3.6-plus-20260411T101024247-112907-7044
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: qwen3.6-plus
+provider: openai-chat
+finishReason: stop
+-->
+
+### User · 2026/04/11 10:33:26
+
+我们先解决 duckdb 锁并发的问题，我们多个项目如何并发使用？
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T103326352-113003-7140
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:38:29
+
+是否考虑多仓子数据库？
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T103829236-113040-7177
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 10:38:35
+
+Jason，我直接问：你刚才提到的并发问题，具体是指哪种场景？
+
+1. **多项目并发**：不同项目（不同 shelf）之间能否并发访问？（当前已支持：每个 shelf 是独立的 DuckDB 文件）
+2. **同一 shelf 多进程**：CLI + Daemon 同时访问同一个 shelf？（这是你刚才遇到的锁冲突）
+3. **多 CLI 进程**：同时跑 `hypatia mine projA` 和 `hypatia mine projB`？（也会锁冲突）
+
+你刚才 mine 时我跑 `hypatia status` 报错，是因为**同一个 default shelf 被两个进程同时写**。
+
+当前实现：
+- 每个项目有独立 shelf 目录 → **多项目间天然隔离**
+- 同一 shelf 的 DuckDB 用默认连接 → **单进程独占写锁**
+
+你想要解决的是哪种并发场景？
+
+<!-- cache-meta
+requestId: openai-responses-ali-coding-plan.key1-glm-5-20260411T103823420-113037-7174
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: glm-5
+provider: anthropic-messages
+finishReason: stop
+-->
+
+### User · 2026/04/11 10:38:56
+
+是否考虑多仓子数据库？
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T103856289-113049-7186
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:39:14
+
+你参考下 mempalace 的 wing 设计
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T103914742-113053-7190
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:39:32
+
+继续执行
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T103932827-113055-7192
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 10:48:30
+
+我的问题是，现在我们的单一全局 db 有 lock 的问题，我们多个库同时跑会有无法访问的限制，我们需要解决这个问题，而且我认为这个其实每个库独立，但是路径都在同一个大目录下管理比较合理
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T104830314-113079-7216
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 10:48:55
+
+明白了，Jason。你的目标我归纳成两条：
+
+1. **解决单一全局 DB 锁冲突**（现在一个命令 mine 时，另一个命令容易被 `default/data.duckdb` 锁住）  
+2. **多库独立、统一目录管理**（每个库独立文件，但都放在 `~/.hypatia` 下集中管理）
+
+这个需求已经足够明确，我给你一版可直接落地的方案。
+
+<proposed_plan>
+## Hypatia 并发锁与多库独立治理方案（参考 MemPalace 的 wing 管理思路）
+
+### Summary
+将当前“启动即连接 default shelf”的模型改为“按需连接目标 shelf”，并把所有 shelf 统一收敛到 `~/.hypatia/shelves/<shelf>/`。  
+核心目标：**不同项目（不同 shelf）并发运行互不锁死**；同一项目并发写时给出明确冲突语义与重试策略。
+
+### Implementation Changes
+- **移除全局默认库强依赖**
+  - `Lab::new()` 不再自动 `ensure_default()`。
+  - CLI `run()` 不再在启动时无条件创建并连接 `Lab`；改为在具体子命令分支中懒加载。
+  - 结果：执行 `project list / daemon status / search --
+
+<!-- cache-meta
+requestId: openai-responses-crs.key2-gpt-5.3-codex-20260411T104830314-113079-7216
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.3-codex
+provider: openai-responses
+finishReason: stop
+-->
+
+### User · 2026/04/11 10:49:58
+
+Implement the plan.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T104958466-113089-7226
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 11:04:18
+
+Jason，现在我来总结一下改动和并发效果：
+
+## 已完成改动
+
+### 1. `Lab::new()` 不再自动连接 default shelf
+- 原来：`Lab::new()` 会 `ensure_default()`，打开 `~/.hypatia/default/`
+- 现在：`Lab::new()` 只创建空管理器，不碰任何 shelf 数据库
+- 新增 `Lab::with_shelf(name)` 用于需要预连特定 shelf 的场景
+
+### 2. CLI 命令按需连接 shelf
+所有命令分支在操作 shelf 之前才调用 `lab.ensure_shelf(&shelf)`，只打开目标 shelf 的 DB 文件：
+- search / vsearch / hybrid / mine / watch / status / doctor
+- knowledge CRUD / statement CRUD / query
+- project-mine / rebuild-fts
+- REPL 仍连 default（交互式场景）
+
+### 3. 并发效果
+
+| 场景 | 之前 | 现在 |
+|------|------|------|
+| `hypatia mine --shelf A` 同时 `hypatia search --shelf B` | ❌ 都打开 default，DB 锁冲突 | ✅ A/B 各自独立 DB，无锁 |
+| `hypatia project-mine projA` 同时 `hypatia project-mine projB` | ❌ 都碰 default + shelf 冲突 | ✅ 各自 shelf 独立 DB |
+| 同一 shelf 并发读写 | ⚠️ DuckDB WAL 模式可并行读，写串行 | 同左（DuckDB 层行为不变） |
+
+### 核心原则
+**每个 shelf = 独立 DuckDB + 独立 SQLite**，`~/.hypatia/shelves/<shelf>/` 路径隔离。只要不同命令操作不同 shelf，完全不冲突。
+
+---
+
+需要我继续跑测试，然后提交到 GitHub 吗？
+
+<!-- cache-meta
+requestId: openai-responses-qwen.5-antonsoltan-qwen3.6-plus-20260411T110359717-113230-7367
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: qwen3.6-plus
+provider: openai-chat
+finishReason: stop
+-->
+
+### User · 2026/04/11 11:06:35
+
+你还要改 skills，然后测试，提交 github
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T110635742-113263-7400
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->

@@ -32,12 +32,18 @@ pub struct Lab {
 
 impl Lab {
     pub fn new() -> Result<Self> {
-        let mut shelf_manager = ShelfManager::new();
-        shelf_manager.ensure_default()?;
+        let shelf_manager = ShelfManager::new();
         Ok(Self {
             shelf_manager,
             vector_stores: HashMap::new(),
         })
+    }
+
+    /// Create Lab with a specific shelf pre-connected
+    pub fn with_shelf(shelf_name: &str) -> Result<Self> {
+        let mut lab = Self::new()?;
+        lab.ensure_shelf(shelf_name)?;
+        Ok(lab)
     }
 
     // --- Shelf operations ---
