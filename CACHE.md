@@ -15689,3 +15689,634 @@ sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
 model: gpt-5.4
 provider: openai-responses
 -->
+
+### Assistant · 2026/04/11 11:13:37
+
+Jason，任务已完成：
+
+**Git 提交**：`75d29d5` 已推送至 https://github.com/Jasonzhangf/hypatia.git  
+**SKILL 更新**：`~/.codex/skills/hypatia-flow/SKILL.md` 添加并发锁设计章节，修正文件路径。  
+**测试**：76 tests passing。
+
+<!-- cache-meta
+requestId: openai-responses-ali-coding-plan.key1-glm-5-20260411T111326848-113393-7530
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: glm-5
+provider: anthropic-messages
+finishReason: stop
+-->
+
+### User · 2026/04/11 11:19:32
+
+启动使用哪个仓，各自仓如何管理有写入吗？
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T111932416-113496-7633
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 11:30:07
+
+Jason，回答你的问题：
+
+## 1. 启动时用哪个 shelf？
+
+**取决于命令**：
+
+| 命令 | 使用 shelf | 原因 |
+|------|-----------|------|
+| `hypatia search "query" --shelf routecodex` | routecodex | 参数指定，只连这个 |
+| `hypatia project mine routecodex` | 从 projects.json 读取 → routecodex | 按项目名查 shelf |
+| `hypatia repl` | default | 交互式场景，保留默认 |
+| `hypatia mine --shelf X <path>` | X | 参数指定 |
+
+**关键**：`Lab::new()` 现在**不连任何 shelf**。只有命令执行到具体分支时，才会 `ensure_shelf(&shelf)` 连目标库。
+
+## 2. 各 shelf 如何独立管理写入？
+
+**每个 shelf = 独立文件**：
+```
+~/.hypatia/shelves/routecodex/
+├── data.duckdb      ← 只存 routecodex 的知识
+├── index.sqlite     ← 只存 routecodex 的 FTS
+└── vectors.sqlite   ← 只存 routecodex 的向量
+
+~/.hypatia/shelves/obsidian/
+├── data.duckdb      ← 只存 obsidian 的知识
+├── index.sqlite     ← 只存 obsidian 的 FTS
+└── vectors.sqlite   ← 只存 obsidian 的向量
+```
+
+**写入流程**（以 daemon 为例）：
+```
+文件变动 → determine_shelf_for_path(path) → 匹配项目 → 找到 shelf 名
+→ ensure_shelf(shelf) → 连对应 DB → mine_directory → 写入该 shelf
+```
+
+不同 shelf 的文件路径完全不同，**写入时互不干扰**。
+
+需要我把这些补进 SKILL 并提交吗？
+
+<!-- cache-meta
+requestId: openai-responses-qwen.5-antonsoltan-qwen3.6-plus-20260411T112954186-113619-7756
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: qwen3.6-plus
+provider: openai-chat
+finishReason: stop
+-->
+
+### User · 2026/04/11 11:35:25
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113525341-113677-7814
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:35:58
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113558342-113685-7822
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:36:09
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113609234-113687-7824
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:36:18
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113617859-113689-7826
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:37:19
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113719614-113709-7846
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:37:27
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113727723-113711-7848
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:37:32
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113732142-113712-7849
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:37:48
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113748472-113717-7854
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:37:52
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113751881-113718-7855
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:37:58
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113758494-113720-7857
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:38:01
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113801027-113721-7858
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:38:12
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113812074-113725-7862
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:38:17
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113811598-113724-7861
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:38:23
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113812074-113725-7862
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:38:25
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113824932-113728-7865
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:38:31
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113831115-113730-7867
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:38:36
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113836365-113732-7869
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:38:38
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113831115-113730-7867
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:38:50
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113850545-113736-7873
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:38:59
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113859201-113738-7875
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:39:04
+
+需要告诉项目如何初始化，包括参数配置，数据库应该怎么用，把别人当成对 hypatia 完全不懂来完成一次性不用查询的教学到 skills
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113904328-113740-7877
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:39:13
+
+I need to understand the full Hypatia CLI codebase to write a comprehensive SKILL.md. Please explore and report:
+
+1. All CLI commands and their arguments (from src/cli/commands.rs - the full Cli enum and Commands enum)
+2. Project model fields (src/model/project.rs - Project struct, all fields and defaults)
+3. Shelf storage structure (src/storage/shelf_manager.rs - how shelves are created, what files are created)
+4. Miner configuration (src/miner/ - MinerConfig, skip_patterns, file extensions, max_file_size, chunk_size defaults)
+5. Search options (src/cli/commands.rs - SearchOpts struct)
+6. Daemon configuration (src/daemon/ - DaemonState, WatchDaemon, how daemon works)
+7. Vector/embedding setup (src/storage/vector_store.rs or similar - how vectors work, what model is used)
+8. Init model process (src/cli/init_model.rs - what happens during `hypatia init`)
+9. Local config format (what goes in .hypatia/project.toml or .hypatia_ignore)
+10. The error types (src/error.rs)
+11. How ensure_shelf and connect_shelf work in src/lab.rs
+12. The repl commands (src/cli/repl.rs - what interactive commands exist)
+
+Report all struct fields, defaults, and CLI argument names with their defaults.
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T113859201-113738-7875
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### Assistant · 2026/04/11 11:41:39
+
+Jason，全面探索完毕。以下是完整的 Hypatia 代码库技术报告，包含所有你需要编写完整 SKILL.md 的信息。
+
+---
+
+## 1. CLI Commands (src/cli/commands.rs)
+
+**Cli struct**:
+- `command: Option<Commands>` — 无命令默认进入 REPL
+
+**Commands enum (21 个子命令)**:
+
+| 命令 | 参数 | 默认值 | 说明 |
+|------|------|--------|------|
+| `connect` | `path: PathBuf` | — | 连接 shelf 目录 |
+| | `--name / -n` | `None` | 可选 shelf 名 |
+| `disconnect` | `name: String` | — | 断开 shelf |
+| `list` | 无 | — | 列出已连接 shelf |
+| `query` | `jse: String` | — | 执行 JSE 查询 |
+| | `--shelf / -s` | `"default"` | 目标 shelf |
+| `knowledge create` | `name: String` | — | 创建知识条目 |
+| | `--data / -d` | `""` | 内容数据 |
+| | `--tags / -t` | `""` | 逗号分隔标签 |
+| | `--synonyms / -s` | `""` | 逗号分隔同义词 |
+| | `--shelf` | `"default"` | 目标 shelf |
+| `knowledge get` | `name`, `--shelf` | `"default"` | 获取知识条目 |
+| `knowledge delete` | `name`, `--shelf` | `"default"` | 删除知识条目 |
+| `statement create` | `subject`, `predicate`, `object` | — | 创建三元组 |
+| | `--data / -d` | `""` | 附加数据 |
+| | `--synonyms / -s` | `None` | JSON 同义词 |
+| | `--shelf` | `"default"` | 目标 shelf |
+| `statement delete` | `subject`, `predicate`, `object`, `--shelf` | `"default"` | 删除三元组 |
+| `search` | `query: String` | — | FTS 搜索 |
+| | `--catalog / -c` | `None` | 按 catalog 过滤 |
+| | `--limit` | `100` | 最大结果数 |
+| | `--offset` | `0` | 偏移 |
+| | `--shelf` | `"default"` | 目标 shelf |
+| `vsearch` | `query`, `--shelf` | `"default"`, `--limit 10` | 向量语义搜索 |
+| `hybrid` | `query`, `--shelf` | `"default"`, `--limit 10` | Hybrid RRF 融合 |
+| `init` | `path` | `"~/.hypatia"` | 初始化库（下载模型） |
+| `mine` | `path: PathBuf` | — | 索引目录 |
+| | `--shelf` | `"default"` | 存储 shelf |
+| | `--max-size` | `1048576` (1MB) | 最大文件 |
+| | `--chunk-size` | `512` | 块大小 |
+| | `--hidden` | `false` | 包含隐藏目录 |
+| `status` | `--shelf` | `"default"` | 索引统计 |
+| `doctor` | `--shelf` | `"default"` | 健康检查 |
+| `project add` | `name` | — | 注册项目 |
+| | `--root` | 必需 | 项目根目录 |
+| | `--wing` | `None` | 分类 |
+| | `--room` | `None` | 子分类 |
+| `project list` | 无 | — | 列出项目 |
+| `project show` | `name` ... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-qwen.1-qwen3.6-plus-20260411T114003852-113754-7891
+sessionId: 019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8
+model: qwen3.6-plus
+provider: openai-chat
+finishReason: stop
+-->
+
+### User · 2026/04/11 11:42:10
+
+<subagent_notification>
+{"agent_path":"019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8","status":{"completed":"Jason，全面探索完毕。以下是完整的 Hypatia 代码库技术报告，包含所有你需要编写完整 SKILL.md 的信息。\n\n---\n\n## 1. CLI Commands (src/cli/commands.rs)\n\n**Cli struct**:\n- `command: Option<Commands>` — 无命令默认进入 REPL\n\n**Commands enum (21 个子命令)**:\n\n| 命令 | 参数 | 默认值 | 说明 |\n|------|------|--------|------|\n| `connect` | `path: PathBuf` | — | 连接 shelf 目录 |\n| | `--name / -n` | `None` | 可选 shelf 名 |\n| `disconnect` | `name: String` | — | 断开 shelf |\n| `list` | 无 | — | 列出已连接 shelf |\n| `query` | `jse: String` | — | 执行 JSE 查询 |\n| | `--shelf / -s` | `\"default\"` | 目标 shelf |\n| `knowledge create` | `name: String` | — | 创建知识条目 |\n| | `--data / -d` | `\"\"` | 内容数据 |\n| | `--tags / -t` | `\"\"` | 逗号分隔标签 |\n| | `--synonyms / -s` | `\"\"` | 逗号分隔同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `knowledge get` | `name`, `--shelf` | `\"default\"` | 获取知识条目 |\n| `knowledge delete` | `name`, `--shelf` | `\"default\"` | 删除知识条目 |\n| `statement create` | `subject`, `predicate`, `object` | — | 创建三元组 |\n| | `--data / -d` | `\"\"` | 附加数据 |\n| | `--synonyms / -s` | `None` | JSON 同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `statement delete` | `subject`, `predicate`, `object`, `--shelf` | `\"default\"` | 删除三元组 |\n| `search` | `query: String` | — | FTS 搜索 |\n| | `--catalog / -c` | `None` | 按 catalog 过滤 |\n| | `--limit` | `100` | 最大结果数 |\n| | `--offset` | `0` | 偏移 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `vsearch` | `query`, `--shelf` | `\"default\"`, `--limit 10` | 向量语义搜索 |\n| `hybrid` | `query`, `--shelf` | `\"default\"`, `--limit 10` | Hybrid RRF 融合 |\n| `init` | `path` | `\"~/.hypatia\"` | 初始化库（下载模型） |\n| `mine` | `path: PathBuf` | — | 索引目录 |\n| | `--shelf` | `\"default\"` | 存储 shelf |\n| | `--max-size` | `1048576` (1MB) | 最大文件 |\n| | `--chunk-size` | `512` | 块大小 |\n| | `--hidden` | `false` | 包含隐藏目录 |\n| `status` | `--shelf` | `\"default\"` | 索引统计 |\n| `doctor` | `--shelf` | `\"default\"` | 健康检查 |\n| `pr... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T114209909-113770-7907
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:42:26
+
+<subagent_notification>
+{"agent_path":"019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8","status":{"completed":"Jason，全面探索完毕。以下是完整的 Hypatia 代码库技术报告，包含所有你需要编写完整 SKILL.md 的信息。\n\n---\n\n## 1. CLI Commands (src/cli/commands.rs)\n\n**Cli struct**:\n- `command: Option<Commands>` — 无命令默认进入 REPL\n\n**Commands enum (21 个子命令)**:\n\n| 命令 | 参数 | 默认值 | 说明 |\n|------|------|--------|------|\n| `connect` | `path: PathBuf` | — | 连接 shelf 目录 |\n| | `--name / -n` | `None` | 可选 shelf 名 |\n| `disconnect` | `name: String` | — | 断开 shelf |\n| `list` | 无 | — | 列出已连接 shelf |\n| `query` | `jse: String` | — | 执行 JSE 查询 |\n| | `--shelf / -s` | `\"default\"` | 目标 shelf |\n| `knowledge create` | `name: String` | — | 创建知识条目 |\n| | `--data / -d` | `\"\"` | 内容数据 |\n| | `--tags / -t` | `\"\"` | 逗号分隔标签 |\n| | `--synonyms / -s` | `\"\"` | 逗号分隔同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `knowledge get` | `name`, `--shelf` | `\"default\"` | 获取知识条目 |\n| `knowledge delete` | `name`, `--shelf` | `\"default\"` | 删除知识条目 |\n| `statement create` | `subject`, `predicate`, `object` | — | 创建三元组 |\n| | `--data / -d` | `\"\"` | 附加数据 |\n| | `--synonyms / -s` | `None` | JSON 同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `statement delete` | `subject`, `predicate`, `object`, `--shelf` | `\"default\"` | 删除三元组 |\n| `search` | `query: String` | — | FTS 搜索 |\n| | `--catalog / -c` | `None` | 按 catalog 过滤 |\n| | `--limit` | `100` | 最大结果数 |\n| | `--offset` | `0` | 偏移 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `vsearch` | `query`, `--shelf` | `\"default\"`, `--limit 10` | 向量语义搜索 |\n| `hybrid` | `query`, `--shelf` | `\"default\"`, `--limit 10` | Hybrid RRF 融合 |\n| `init` | `path` | `\"~/.hypatia\"` | 初始化库（下载模型） |\n| `mine` | `path: PathBuf` | — | 索引目录 |\n| | `--shelf` | `\"default\"` | 存储 shelf |\n| | `--max-size` | `1048576` (1MB) | 最大文件 |\n| | `--chunk-size` | `512` | 块大小 |\n| | `--hidden` | `false` | 包含隐藏目录 |\n| `status` | `--shelf` | `\"default\"` | 索引统计 |\n| `doctor` | `--shelf` | `\"default\"` | 健康检查 |\n| `pr... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T114226122-113773-7910
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:45:22
+
+<subagent_notification>
+{"agent_path":"019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8","status":{"completed":"Jason，全面探索完毕。以下是完整的 Hypatia 代码库技术报告，包含所有你需要编写完整 SKILL.md 的信息。\n\n---\n\n## 1. CLI Commands (src/cli/commands.rs)\n\n**Cli struct**:\n- `command: Option<Commands>` — 无命令默认进入 REPL\n\n**Commands enum (21 个子命令)**:\n\n| 命令 | 参数 | 默认值 | 说明 |\n|------|------|--------|------|\n| `connect` | `path: PathBuf` | — | 连接 shelf 目录 |\n| | `--name / -n` | `None` | 可选 shelf 名 |\n| `disconnect` | `name: String` | — | 断开 shelf |\n| `list` | 无 | — | 列出已连接 shelf |\n| `query` | `jse: String` | — | 执行 JSE 查询 |\n| | `--shelf / -s` | `\"default\"` | 目标 shelf |\n| `knowledge create` | `name: String` | — | 创建知识条目 |\n| | `--data / -d` | `\"\"` | 内容数据 |\n| | `--tags / -t` | `\"\"` | 逗号分隔标签 |\n| | `--synonyms / -s` | `\"\"` | 逗号分隔同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `knowledge get` | `name`, `--shelf` | `\"default\"` | 获取知识条目 |\n| `knowledge delete` | `name`, `--shelf` | `\"default\"` | 删除知识条目 |\n| `statement create` | `subject`, `predicate`, `object` | — | 创建三元组 |\n| | `--data / -d` | `\"\"` | 附加数据 |\n| | `--synonyms / -s` | `None` | JSON 同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `statement delete` | `subject`, `predicate`, `object`, `--shelf` | `\"default\"` | 删除三元组 |\n| `search` | `query: String` | — | FTS 搜索 |\n| | `--catalog / -c` | `None` | 按 catalog 过滤 |\n| | `--limit` | `100` | 最大结果数 |\n| | `--offset` | `0` | 偏移 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `vsearch` | `query`, `--shelf` | `\"default\"`, `--limit 10` | 向量语义搜索 |\n| `hybrid` | `query`, `--shelf` | `\"default\"`, `--limit 10` | Hybrid RRF 融合 |\n| `init` | `path` | `\"~/.hypatia\"` | 初始化库（下载模型） |\n| `mine` | `path: PathBuf` | — | 索引目录 |\n| | `--shelf` | `\"default\"` | 存储 shelf |\n| | `--max-size` | `1048576` (1MB) | 最大文件 |\n| | `--chunk-size` | `512` | 块大小 |\n| | `--hidden` | `false` | 包含隐藏目录 |\n| `status` | `--shelf` | `\"default\"` | 索引统计 |\n| `doctor` | `--shelf` | `\"default\"` | 健康检查 |\n| `pr... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T114522501-113781-7918
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:45:41
+
+<subagent_notification>
+{"agent_path":"019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8","status":{"completed":"Jason，全面探索完毕。以下是完整的 Hypatia 代码库技术报告，包含所有你需要编写完整 SKILL.md 的信息。\n\n---\n\n## 1. CLI Commands (src/cli/commands.rs)\n\n**Cli struct**:\n- `command: Option<Commands>` — 无命令默认进入 REPL\n\n**Commands enum (21 个子命令)**:\n\n| 命令 | 参数 | 默认值 | 说明 |\n|------|------|--------|------|\n| `connect` | `path: PathBuf` | — | 连接 shelf 目录 |\n| | `--name / -n` | `None` | 可选 shelf 名 |\n| `disconnect` | `name: String` | — | 断开 shelf |\n| `list` | 无 | — | 列出已连接 shelf |\n| `query` | `jse: String` | — | 执行 JSE 查询 |\n| | `--shelf / -s` | `\"default\"` | 目标 shelf |\n| `knowledge create` | `name: String` | — | 创建知识条目 |\n| | `--data / -d` | `\"\"` | 内容数据 |\n| | `--tags / -t` | `\"\"` | 逗号分隔标签 |\n| | `--synonyms / -s` | `\"\"` | 逗号分隔同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `knowledge get` | `name`, `--shelf` | `\"default\"` | 获取知识条目 |\n| `knowledge delete` | `name`, `--shelf` | `\"default\"` | 删除知识条目 |\n| `statement create` | `subject`, `predicate`, `object` | — | 创建三元组 |\n| | `--data / -d` | `\"\"` | 附加数据 |\n| | `--synonyms / -s` | `None` | JSON 同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `statement delete` | `subject`, `predicate`, `object`, `--shelf` | `\"default\"` | 删除三元组 |\n| `search` | `query: String` | — | FTS 搜索 |\n| | `--catalog / -c` | `None` | 按 catalog 过滤 |\n| | `--limit` | `100` | 最大结果数 |\n| | `--offset` | `0` | 偏移 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `vsearch` | `query`, `--shelf` | `\"default\"`, `--limit 10` | 向量语义搜索 |\n| `hybrid` | `query`, `--shelf` | `\"default\"`, `--limit 10` | Hybrid RRF 融合 |\n| `init` | `path` | `\"~/.hypatia\"` | 初始化库（下载模型） |\n| `mine` | `path: PathBuf` | — | 索引目录 |\n| | `--shelf` | `\"default\"` | 存储 shelf |\n| | `--max-size` | `1048576` (1MB) | 最大文件 |\n| | `--chunk-size` | `512` | 块大小 |\n| | `--hidden` | `false` | 包含隐藏目录 |\n| `status` | `--shelf` | `\"default\"` | 索引统计 |\n| `doctor` | `--shelf` | `\"default\"` | 健康检查 |\n| `pr... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T114541222-113783-7920
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:46:03
+
+<subagent_notification>
+{"agent_path":"019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8","status":{"completed":"Jason，全面探索完毕。以下是完整的 Hypatia 代码库技术报告，包含所有你需要编写完整 SKILL.md 的信息。\n\n---\n\n## 1. CLI Commands (src/cli/commands.rs)\n\n**Cli struct**:\n- `command: Option<Commands>` — 无命令默认进入 REPL\n\n**Commands enum (21 个子命令)**:\n\n| 命令 | 参数 | 默认值 | 说明 |\n|------|------|--------|------|\n| `connect` | `path: PathBuf` | — | 连接 shelf 目录 |\n| | `--name / -n` | `None` | 可选 shelf 名 |\n| `disconnect` | `name: String` | — | 断开 shelf |\n| `list` | 无 | — | 列出已连接 shelf |\n| `query` | `jse: String` | — | 执行 JSE 查询 |\n| | `--shelf / -s` | `\"default\"` | 目标 shelf |\n| `knowledge create` | `name: String` | — | 创建知识条目 |\n| | `--data / -d` | `\"\"` | 内容数据 |\n| | `--tags / -t` | `\"\"` | 逗号分隔标签 |\n| | `--synonyms / -s` | `\"\"` | 逗号分隔同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `knowledge get` | `name`, `--shelf` | `\"default\"` | 获取知识条目 |\n| `knowledge delete` | `name`, `--shelf` | `\"default\"` | 删除知识条目 |\n| `statement create` | `subject`, `predicate`, `object` | — | 创建三元组 |\n| | `--data / -d` | `\"\"` | 附加数据 |\n| | `--synonyms / -s` | `None` | JSON 同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `statement delete` | `subject`, `predicate`, `object`, `--shelf` | `\"default\"` | 删除三元组 |\n| `search` | `query: String` | — | FTS 搜索 |\n| | `--catalog / -c` | `None` | 按 catalog 过滤 |\n| | `--limit` | `100` | 最大结果数 |\n| | `--offset` | `0` | 偏移 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `vsearch` | `query`, `--shelf` | `\"default\"`, `--limit 10` | 向量语义搜索 |\n| `hybrid` | `query`, `--shelf` | `\"default\"`, `--limit 10` | Hybrid RRF 融合 |\n| `init` | `path` | `\"~/.hypatia\"` | 初始化库（下载模型） |\n| `mine` | `path: PathBuf` | — | 索引目录 |\n| | `--shelf` | `\"default\"` | 存储 shelf |\n| | `--max-size` | `1048576` (1MB) | 最大文件 |\n| | `--chunk-size` | `512` | 块大小 |\n| | `--hidden` | `false` | 包含隐藏目录 |\n| `status` | `--shelf` | `\"default\"` | 索引统计 |\n| `doctor` | `--shelf` | `\"default\"` | 健康检查 |\n| `pr... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T114603649-113785-7922
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:46:21
+
+<subagent_notification>
+{"agent_path":"019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8","status":{"completed":"Jason，全面探索完毕。以下是完整的 Hypatia 代码库技术报告，包含所有你需要编写完整 SKILL.md 的信息。\n\n---\n\n## 1. CLI Commands (src/cli/commands.rs)\n\n**Cli struct**:\n- `command: Option<Commands>` — 无命令默认进入 REPL\n\n**Commands enum (21 个子命令)**:\n\n| 命令 | 参数 | 默认值 | 说明 |\n|------|------|--------|------|\n| `connect` | `path: PathBuf` | — | 连接 shelf 目录 |\n| | `--name / -n` | `None` | 可选 shelf 名 |\n| `disconnect` | `name: String` | — | 断开 shelf |\n| `list` | 无 | — | 列出已连接 shelf |\n| `query` | `jse: String` | — | 执行 JSE 查询 |\n| | `--shelf / -s` | `\"default\"` | 目标 shelf |\n| `knowledge create` | `name: String` | — | 创建知识条目 |\n| | `--data / -d` | `\"\"` | 内容数据 |\n| | `--tags / -t` | `\"\"` | 逗号分隔标签 |\n| | `--synonyms / -s` | `\"\"` | 逗号分隔同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `knowledge get` | `name`, `--shelf` | `\"default\"` | 获取知识条目 |\n| `knowledge delete` | `name`, `--shelf` | `\"default\"` | 删除知识条目 |\n| `statement create` | `subject`, `predicate`, `object` | — | 创建三元组 |\n| | `--data / -d` | `\"\"` | 附加数据 |\n| | `--synonyms / -s` | `None` | JSON 同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `statement delete` | `subject`, `predicate`, `object`, `--shelf` | `\"default\"` | 删除三元组 |\n| `search` | `query: String` | — | FTS 搜索 |\n| | `--catalog / -c` | `None` | 按 catalog 过滤 |\n| | `--limit` | `100` | 最大结果数 |\n| | `--offset` | `0` | 偏移 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `vsearch` | `query`, `--shelf` | `\"default\"`, `--limit 10` | 向量语义搜索 |\n| `hybrid` | `query`, `--shelf` | `\"default\"`, `--limit 10` | Hybrid RRF 融合 |\n| `init` | `path` | `\"~/.hypatia\"` | 初始化库（下载模型） |\n| `mine` | `path: PathBuf` | — | 索引目录 |\n| | `--shelf` | `\"default\"` | 存储 shelf |\n| | `--max-size` | `1048576` (1MB) | 最大文件 |\n| | `--chunk-size` | `512` | 块大小 |\n| | `--hidden` | `false` | 包含隐藏目录 |\n| `status` | `--shelf` | `\"default\"` | 索引统计 |\n| `doctor` | `--shelf` | `\"default\"` | 健康检查 |\n| `pr... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T114621601-113788-7925
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->
+
+### User · 2026/04/11 11:46:52
+
+<subagent_notification>
+{"agent_path":"019d7a9c-4b6f-7d90-9ae7-e733c5b8dcb8","status":{"completed":"Jason，全面探索完毕。以下是完整的 Hypatia 代码库技术报告，包含所有你需要编写完整 SKILL.md 的信息。\n\n---\n\n## 1. CLI Commands (src/cli/commands.rs)\n\n**Cli struct**:\n- `command: Option<Commands>` — 无命令默认进入 REPL\n\n**Commands enum (21 个子命令)**:\n\n| 命令 | 参数 | 默认值 | 说明 |\n|------|------|--------|------|\n| `connect` | `path: PathBuf` | — | 连接 shelf 目录 |\n| | `--name / -n` | `None` | 可选 shelf 名 |\n| `disconnect` | `name: String` | — | 断开 shelf |\n| `list` | 无 | — | 列出已连接 shelf |\n| `query` | `jse: String` | — | 执行 JSE 查询 |\n| | `--shelf / -s` | `\"default\"` | 目标 shelf |\n| `knowledge create` | `name: String` | — | 创建知识条目 |\n| | `--data / -d` | `\"\"` | 内容数据 |\n| | `--tags / -t` | `\"\"` | 逗号分隔标签 |\n| | `--synonyms / -s` | `\"\"` | 逗号分隔同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `knowledge get` | `name`, `--shelf` | `\"default\"` | 获取知识条目 |\n| `knowledge delete` | `name`, `--shelf` | `\"default\"` | 删除知识条目 |\n| `statement create` | `subject`, `predicate`, `object` | — | 创建三元组 |\n| | `--data / -d` | `\"\"` | 附加数据 |\n| | `--synonyms / -s` | `None` | JSON 同义词 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `statement delete` | `subject`, `predicate`, `object`, `--shelf` | `\"default\"` | 删除三元组 |\n| `search` | `query: String` | — | FTS 搜索 |\n| | `--catalog / -c` | `None` | 按 catalog 过滤 |\n| | `--limit` | `100` | 最大结果数 |\n| | `--offset` | `0` | 偏移 |\n| | `--shelf` | `\"default\"` | 目标 shelf |\n| `vsearch` | `query`, `--shelf` | `\"default\"`, `--limit 10` | 向量语义搜索 |\n| `hybrid` | `query`, `--shelf` | `\"default\"`, `--limit 10` | Hybrid RRF 融合 |\n| `init` | `path` | `\"~/.hypatia\"` | 初始化库（下载模型） |\n| `mine` | `path: PathBuf` | — | 索引目录 |\n| | `--shelf` | `\"default\"` | 存储 shelf |\n| | `--max-size` | `1048576` (1MB) | 最大文件 |\n| | `--chunk-size` | `512` | 块大小 |\n| | `--hidden` | `false` | 包含隐藏目录 |\n| `status` | `--shelf` | `\"default\"` | 索引统计 |\n| `doctor` | `--shelf` | `\"default\"` | 健康检查 |\n| `pr... [truncated]
+
+<!-- cache-meta
+requestId: openai-responses-unknown-unknown-20260411T114651839-113791-7928
+sessionId: 019d76f2-e6bc-7220-823a-cc920fd71d5f
+model: gpt-5.4
+provider: openai-responses
+-->

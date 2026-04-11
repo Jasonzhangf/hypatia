@@ -199,6 +199,7 @@ impl WatchDaemon {
         let entries: Vec<_> = self.state.watched.iter().map(|e| e.clone()).collect();
 
         for entry in entries {
+            lab.ensure_shelf(&entry.shelf)?;
             let path = PathBuf::from(&entry.path);
             if let Some(project) = manager.get_project(&entry.project_name) {
                 let count = lab.mine_directory(&entry.shelf.clone(), &path, project.max_file_size, project.chunk_size, false)?;
@@ -255,6 +256,10 @@ fn process_pending_changes(changes: &HashMap<PathBuf, String>, hypatia_home: &Pa
         });
 
     for (shelf, paths) in by_shelf {
+        if let Err(e) = lab.ensure_shelf(&shelf) {
+            eprintln!("Failed to ensure shelf '{}': {}", shelf, e);
+            continue;
+        }
         println!("Processing {} changed files for shelf '{}'", paths.len(), shelf);
 
         if let Ok(manager) = ProjectManager::new(hypatia_home) {
